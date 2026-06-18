@@ -21,6 +21,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool obscurePassword = true;
   bool obscureConfirmPassword = true;
+
+  // Tracks whether the student has "uploaded" their document
+  // (placeholder — will be replaced with real file-picker logic later)
+  bool documentUploaded = false;
   static const Color primaryGreen = Color(0xFF2E7D32);
 
   @override
@@ -340,7 +344,80 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         },
                       ),
 
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 20),
+
+                      //Document Upload
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: primaryGreen.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: primaryGreen.withOpacity(0.3),
+                          ),
+                        ),
+
+                        child: Column(
+                          children: [
+                            Icon(
+                              documentUploaded
+                                  ? Icons.check_circle_rounded
+                                  : Icons.cloud_upload_outlined,
+                              size: 36,
+                              color: primaryGreen,
+                            ),
+
+                            const SizedBox(height: 8),
+
+                            Text(
+                              documentUploaded
+                                  ? 'Document Uploaded ✓'
+                                  : 'Upload Student Requirements',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: documentUploaded
+                                    ? primaryGreen
+                                    : Colors.grey[700],
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                setState(() {
+                                  documentUploaded = true;
+                                });
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Document uploaded!'),
+                                    backgroundColor: primaryGreen,
+                                    duration: Duration(seconds: 2),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.attach_file_rounded),
+                              label: const Text('Upload Requirements'),
+
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: primaryGreen,
+                                side: const BorderSide(color: primaryGreen),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
 
                       //Terms & Conditions (To be remade)
                       Row(
