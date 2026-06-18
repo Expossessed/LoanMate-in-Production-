@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import '../constants/app_colors.dart';
 
 class ProfileTab extends StatelessWidget {
   const ProfileTab({super.key});
 
-  static const Color primaryGreen = Color(0xFF2E7D32);
+
 
   final String userName = 'Juan';
 
@@ -15,7 +16,7 @@ class ProfileTab extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 40,
-            backgroundColor: primaryGreen,
+            backgroundColor: AppColors.primaryGreen,
             child: Text(
               userName[0],
               style: const TextStyle(

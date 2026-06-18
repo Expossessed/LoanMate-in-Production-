@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/app_colors.dart';
 import 'register_screen.dart';
 import 'dashboard_screen.dart';
 
@@ -15,8 +16,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool rememberMe = false;
   bool obscurePassword = true;
-
-  static const Color primaryGreen = Color(0xFF2E7D32);
 
   @override
   void dispose() {
@@ -47,7 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   width: 100,
                   height: 100,
                   decoration: BoxDecoration(
-                    color: primaryGreen,
+                    color: AppColors.primaryGreen,
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -63,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: primaryGreen,
+                    color: AppColors.primaryGreen,
                     letterSpacing: 1.2,
                   ),
                 ),
@@ -98,7 +97,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             hintText: 'Enter your Student ID',
                             prefixIcon: const Icon(
                               Icons.badge_outlined,
-                              color: primaryGreen,
+                              color: AppColors.primaryGreen,
                             ),
 
                             border: OutlineInputBorder(
@@ -108,13 +107,13 @@ class _LoginScreenState extends State<LoginScreen> {
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: const BorderSide(
-                                color: primaryGreen,
+                                color: AppColors.primaryGreen,
                                 width: 2,
                               ),
                             ),
 
                             floatingLabelStyle: const TextStyle(
-                              color: primaryGreen,
+                              color: AppColors.primaryGreen,
                             ),
                           ),
                         ),
@@ -131,10 +130,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             hintText: 'Enter your password',
                             prefixIcon: const Icon(
                               Icons.lock_outline,
-                              color: primaryGreen,
+                              color: AppColors.primaryGreen,
                             ),
 
-                            //The pass visibility button
                             suffixIcon: IconButton(
                               icon: Icon(
                                 obscurePassword
@@ -142,7 +140,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     : Icons.visibility_outlined,
                                 color: Colors.grey,
                               ),
-                              //Changes UI to show the pass
+
                               onPressed: () {
                                 setState(() {
                                   obscurePassword = !obscurePassword;
@@ -156,12 +154,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: const BorderSide(
-                                color: primaryGreen,
+                                color: AppColors.primaryGreen,
                                 width: 2,
                               ),
                             ),
                             floatingLabelStyle: const TextStyle(
-                              color: primaryGreen,
+                              color: AppColors.primaryGreen,
                             ),
                           ),
                         ),
@@ -183,7 +181,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             style: TextStyle(fontSize: 14),
                           ),
 
-                          activeColor: primaryGreen,
+                          activeColor: AppColors.primaryGreen,
                           controlAffinity: ListTileControlAffinity.leading,
 
                           contentPadding: EdgeInsets.zero,
@@ -212,7 +210,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             },
 
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: primaryGreen,
+                              backgroundColor: AppColors.primaryGreen,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -240,7 +238,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: const Text(
                             'Forgot Password?',
                             style: TextStyle(
-                              color: primaryGreen,
+                              color: AppColors.primaryGreen,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -270,7 +268,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 'Register',
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: primaryGreen,
+                                  color: AppColors.primaryGreen,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/app_colors.dart';
 import '../tabs/home_tab.dart';
 import '../tabs/loan_tab.dart';
 import '../tabs/ewallet_tab.dart';
@@ -12,7 +13,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  static const Color primaryGreen = Color(0xFF2E7D32);
+
 
   int currentIndex = 0;
 
@@ -44,7 +45,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
         centerTitle: true,
-        backgroundColor: primaryGreen,
+        backgroundColor: AppColors.primaryGreen,
         foregroundColor: Colors.white,
         elevation: 2,
       ),
@@ -59,7 +60,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           });
         },
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: primaryGreen,
+        selectedItemColor: AppColors.primaryGreen,
         unselectedItemColor: Colors.grey,
         selectedFontSize: 12,
         unselectedFontSize: 12,

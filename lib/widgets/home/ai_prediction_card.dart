@@ -1,28 +1,14 @@
 import 'package:flutter/material.dart';
+import '../../constants/app_colors.dart';
 
 class AiPredictionCard extends StatelessWidget {
   final String aiEvaluation;
 
-  static const Color accentBlue = Color(0xFF1565C0);
-
   const AiPredictionCard({super.key, required this.aiEvaluation});
-
-  Color aiColor(String e) {
-    switch (e.toLowerCase()) {
-      case 'good standing':
-        return accentBlue;
-      case 'at risk':
-        return Colors.orange.shade800;
-      case 'poor standing':
-        return Colors.red.shade700;
-      default:
-        return Colors.grey;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    final Color cardColor = aiColor(aiEvaluation);
+    final Color cardColor = AppColors.aiEvaluationColor(aiEvaluation);
 
     return Card(
       elevation: 3,

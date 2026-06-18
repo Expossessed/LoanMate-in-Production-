@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../widgets/loan/apply_loan_button.dart';
 import '../widgets/loan/ai_evaluation_card.dart';
-import '../widgets/loan/loan_list_section.dart';
+import '../widgets/loan/pending_loans_section.dart';
+import '../widgets/loan/loan_history_section.dart';
 import '../widgets/loan/recent_activity_section.dart';
 
 class LoanTab extends StatefulWidget {
@@ -12,8 +13,6 @@ class LoanTab extends StatefulWidget {
 }
 
 class LoanTabState extends State<LoanTab> {
-  static const Color primaryGreen = Color(0xFF2E7D32);
-
   final String aiResult = 'Eligible';
   final String aiRiskLevel = 'Low Risk';
 
@@ -28,7 +27,7 @@ class LoanTabState extends State<LoanTab> {
       'title': 'Book Allowance Loan',
       'amount': '₱2,500.00',
       'date': 'June 15, 2025',
-      'status': 'Pending',
+      'status': 'Denied',
     },
   ];
 
@@ -37,7 +36,7 @@ class LoanTabState extends State<LoanTab> {
       'title': 'Emergency Loan',
       'amount': '₱3,000.00',
       'date': 'May 20, 2025',
-      'status': 'Paid',
+      'status': 'Partial',
     },
     {
       'title': 'Tuition Fee Loan',
@@ -72,24 +71,23 @@ class LoanTabState extends State<LoanTab> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const ApplyLoanButton(),
+
             const SizedBox(height: 24),
+
             AiEvaluationCard(aiResult: aiResult, aiRiskLevel: aiRiskLevel),
+
             const SizedBox(height: 24),
-            LoanListSection(
-              title: 'Pending Requests',
-              loans: pendingLoans,
-              emptyMessage: 'No pending loan requests.',
-              showBorder: true,
-            ),
+
+            PendingLoansSection(loans: pendingLoans),
+
             const SizedBox(height: 24),
-            LoanListSection(
-              title: 'Loan History',
-              loans: loanHistory,
-              emptyMessage: 'No loan history yet.',
-              showBorder: false,
-            ),
+
+            LoanHistorySection(loans: loanHistory),
+
             const SizedBox(height: 24),
+
             RecentActivitySection(activities: recentActivity),
+
             const SizedBox(height: 12),
           ],
         ),

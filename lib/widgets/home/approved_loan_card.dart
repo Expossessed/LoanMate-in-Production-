@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../constants/app_colors.dart';
 
 class ApprovedLoanCard extends StatelessWidget {
   final double approvedLoanAmount;
-
-  static const Color primaryGreen = Color(0xFF2E7D32);
 
   const ApprovedLoanCard({super.key, required this.approvedLoanAmount});
 
@@ -18,7 +17,7 @@ class ApprovedLoanCard extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
-            colors: [primaryGreen.withOpacity(0.85), primaryGreen],
+            colors: [AppColors.primaryGreen.withOpacity(0.85), AppColors.primaryGreen],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),

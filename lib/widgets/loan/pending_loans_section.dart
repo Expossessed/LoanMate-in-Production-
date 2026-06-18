@@ -1,56 +1,12 @@
 import 'package:flutter/material.dart';
+import '../../constants/app_colors.dart';
 
-class LoanListSection extends StatelessWidget {
-  final String title;
+class PendingLoansSection extends StatelessWidget {
   final List<Map<String, String>> loans;
-  final String emptyMessage;
-  final bool showBorder;
 
-  static const Color primaryGreen = Color(0xFF2E7D32);
+  const PendingLoansSection({super.key, required this.loans});
 
-  const LoanListSection({
-    super.key,
-    required this.title,
-    required this.loans,
-    required this.emptyMessage,
-    this.showBorder = false,
-  });
-
-  Color _statusChipColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'paid':
-        return primaryGreen;
-      case 'overdue':
-        return Colors.red;
-      case 'active':
-        return Colors.blue;
-      case 'pending':
-        return Colors.orange;
-      case 'rejected':
-        return Colors.red.shade900;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  IconData _statusLeadingIcon(String status) {
-    switch (status.toLowerCase()) {
-      case 'paid':
-        return Icons.check_circle_rounded;
-      case 'overdue':
-        return Icons.error_outline_rounded;
-      case 'active':
-        return Icons.play_circle_rounded;
-      case 'pending':
-        return Icons.access_time_rounded;
-      case 'rejected':
-        return Icons.cancel_outlined;
-      default:
-        return Icons.info_outline_rounded;
-    }
-  }
-
-  Widget _emptyState(String message) {
+  Widget _emptyState() {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 24),
@@ -59,7 +15,7 @@ class LoanListSection extends StatelessWidget {
           Icon(Icons.inbox_rounded, size: 40, color: Colors.grey[400]),
           const SizedBox(height: 8),
           Text(
-            message,
+            'No pending loan requests.',
             style: TextStyle(fontSize: 14, color: Colors.grey[500]),
           ),
         ],
@@ -72,17 +28,19 @@ class LoanListSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: const TextStyle(
+        const Text(
+          'Pending Requests',
+          style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
             color: Colors.black87,
           ),
         ),
+
         const SizedBox(height: 12),
+
         if (loans.isEmpty)
-          _emptyState(emptyMessage)
+          _emptyState()
         else
           ListView.builder(
             shrinkWrap: true,
@@ -90,33 +48,33 @@ class LoanListSection extends StatelessWidget {
             itemCount: loans.length,
             itemBuilder: (context, index) {
               final loan = loans[index];
-              final Color chipColor = _statusChipColor(
-                loan['status'] ?? '',
-              );
+              final Color chipColor = AppColors.pendingLoanColor(loan['status'] ?? '');
+
               return Card(
                 elevation: 2,
                 margin: const EdgeInsets.only(bottom: 10),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                  side: showBorder
-                      ? BorderSide(
-                          color: chipColor.withOpacity(0.5),
-                          width: 1,
-                        )
-                      : BorderSide.none,
+                  side: BorderSide(
+                    color: chipColor.withOpacity(0.5),
+                    width: 1,
+                  ),
                 ),
+
                 child: ListTile(
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 8,
                   ),
+
                   leading: CircleAvatar(
                     backgroundColor: chipColor.withOpacity(0.1),
                     child: Icon(
-                      _statusLeadingIcon(loan['status'] ?? ''),
+                      AppColors.pendingLoanIcon(loan['status'] ?? ''),
                       color: chipColor,
                     ),
                   ),
+
                   title: Text(
                     loan['title'] ?? '',
                     style: const TextStyle(
