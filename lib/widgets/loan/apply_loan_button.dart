@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../constants/app_colors.dart';
 
 class ApplyLoanButton extends StatelessWidget {
   const ApplyLoanButton({super.key});
-
-  static const Color primaryGreen = Color(0xFF2E7D32);
 
   @override
   Widget build(BuildContext context) {
@@ -15,7 +14,7 @@ class ApplyLoanButton extends StatelessWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Loan application submitted!'),
-              backgroundColor: primaryGreen,
+              backgroundColor: AppColors.primaryGreen,
               duration: Duration(seconds: 2),
             ),
           );
@@ -26,7 +25,7 @@ class ApplyLoanButton extends StatelessWidget {
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryGreen,
+          backgroundColor: AppColors.primaryGreen,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../constants/app_colors.dart';
 
 class GreetingCard extends StatelessWidget {
   final String name;
-
-  static const Color primaryGreen = Color(0xFF2E7D32);
 
   const GreetingCard({super.key, required this.name});
 
@@ -18,7 +17,7 @@ class GreetingCard extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
           gradient: const LinearGradient(
-            colors: [primaryGreen, Color(0xFF43A047)],
+            colors: [AppColors.primaryGreen, Color(0xFF43A047)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),

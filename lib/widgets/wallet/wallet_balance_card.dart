@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 
-class WalletCard extends StatelessWidget {
-  final double walletBalance;
-  final String id;
+// Displays the main E-Wallet balance inside a gradient card
+class WalletBalanceCard extends StatelessWidget {
+  final double balance;
 
-  const WalletCard({
-    super.key,
-    required this.walletBalance,
-    required this.id,
-  });
+  const WalletBalanceCard({super.key, required this.balance});
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +15,7 @@ class WalletCard extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(28.0),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           gradient: const LinearGradient(
@@ -31,6 +27,7 @@ class WalletCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header row with label and icon
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: const [
@@ -50,23 +47,23 @@ class WalletCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 20),
+
+            // Large balance amount
             Text(
-              'Balance: ₱${walletBalance.toStringAsFixed(2)}',
+              '₱${balance.toStringAsFixed(2)}',
               style: const TextStyle(
-                fontSize: 28,
+                fontSize: 36,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
                 letterSpacing: 0.5,
               ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              'ID: $id',
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.white54,
-                letterSpacing: 2.5,
-              ),
+            const SizedBox(height: 8),
+
+            // Subtitle
+            const Text(
+              'Available Balance',
+              style: TextStyle(fontSize: 13, color: Colors.white54),
             ),
           ],
         ),

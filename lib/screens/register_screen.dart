@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/app_colors.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -25,7 +26,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // Tracks whether the student has "uploaded" their document
   // (placeholder — will be replaced with real file-picker logic later)
   bool documentUploaded = false;
-  static const Color primaryGreen = Color(0xFF2E7D32);
+
 
   @override
   void dispose() {
@@ -57,7 +58,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         labelText: label,
         hintText: hint,
 
-        prefixIcon: Icon(icon, color: primaryGreen),
+        prefixIcon: Icon(icon, color: AppColors.primaryGreen),
 
         suffixIcon: toggleObscure != null
             ? IconButton(
@@ -75,10 +76,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: primaryGreen, width: 2),
+          borderSide: const BorderSide(color: AppColors.primaryGreen, width: 2),
         ),
 
-        floatingLabelStyle: const TextStyle(color: primaryGreen),
+        floatingLabelStyle: const TextStyle(color: AppColors.primaryGreen),
       ),
     );
   }
@@ -95,7 +96,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
           icon: const Icon(
             Icons.check_circle_rounded,
-            color: primaryGreen,
+            color: AppColors.primaryGreen,
             size: 64,
           ),
 
@@ -119,7 +120,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 Navigator.of(context).pop();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: primaryGreen,
+                backgroundColor: AppColors.primaryGreen,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -195,7 +196,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       backgroundColor: Colors.grey[100],
 
       appBar: AppBar(
-        backgroundColor: primaryGreen,
+        backgroundColor: AppColors.primaryGreen,
         foregroundColor: Colors.white,
         title: const Text('Create Account'),
         centerTitle: true,
@@ -212,7 +213,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 width: 90,
                 height: 90,
                 decoration: const BoxDecoration(
-                  color: primaryGreen,
+                  color: AppColors.primaryGreen,
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -229,7 +230,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: primaryGreen,
+                  color: AppColors.primaryGreen,
                   letterSpacing: 1.2,
                 ),
               ),
@@ -351,10 +352,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: primaryGreen.withOpacity(0.05),
+                          color: AppColors.primaryGreen.withOpacity(0.05),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: primaryGreen.withOpacity(0.3),
+                            color: AppColors.primaryGreen.withOpacity(0.3),
                           ),
                         ),
 
@@ -365,7 +366,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   ? Icons.check_circle_rounded
                                   : Icons.cloud_upload_outlined,
                               size: 36,
-                              color: primaryGreen,
+                              color: AppColors.primaryGreen,
                             ),
 
                             const SizedBox(height: 8),
@@ -378,7 +379,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                                 color: documentUploaded
-                                    ? primaryGreen
+                                    ? AppColors.primaryGreen
                                     : Colors.grey[700],
                               ),
                             ),
@@ -393,7 +394,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text('Document uploaded!'),
-                                    backgroundColor: primaryGreen,
+                                    backgroundColor: AppColors.primaryGreen,
                                     duration: Duration(seconds: 2),
                                   ),
                                 );
@@ -402,8 +403,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               label: const Text('Upload Requirements'),
 
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: primaryGreen,
-                                side: const BorderSide(color: primaryGreen),
+                                foregroundColor: AppColors.primaryGreen,
+                                side: const BorderSide(color: AppColors.primaryGreen),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
@@ -424,7 +425,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         children: [
                           Checkbox(
                             value: agreeToTerms,
-                            activeColor: primaryGreen,
+                            activeColor: AppColors.primaryGreen,
                             onChanged: (bool? newValue) {
                               setState(() {
                                 agreeToTerms = newValue ?? false;
@@ -455,7 +456,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                             'Terms & Conditions',
                                             style: TextStyle(
                                               fontWeight: FontWeight.bold,
-                                              color: primaryGreen,
+                                              color: AppColors.primaryGreen,
                                             ),
                                           ),
                                           content: const SingleChildScrollView(
@@ -480,7 +481,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                               child: const Text(
                                                 'Close',
                                                 style: TextStyle(
-                                                  color: primaryGreen,
+                                                  color: AppColors.primaryGreen,
                                                 ),
                                               ),
                                             ),
@@ -493,10 +494,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     'Terms & Conditions',
                                     style: TextStyle(
                                       fontSize: 13,
-                                      color: primaryGreen,
+                                      color: AppColors.primaryGreen,
                                       fontWeight: FontWeight.w600,
                                       decoration: TextDecoration.underline,
-                                      decorationColor: primaryGreen,
+                                      decorationColor: AppColors.primaryGreen,
                                     ),
                                   ),
                                 ),
@@ -516,7 +517,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           onPressed: agreeToTerms ? handleRegister : null,
 
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: primaryGreen,
+                            backgroundColor: AppColors.primaryGreen,
                             foregroundColor: Colors.white,
 
                             disabledBackgroundColor: Colors.grey[300],
@@ -555,7 +556,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               'Login',
                               style: TextStyle(
                                 fontSize: 14,
-                                color: primaryGreen,
+                                color: AppColors.primaryGreen,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),

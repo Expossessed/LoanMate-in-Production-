@@ -1,33 +1,34 @@
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 
-class SavingsProgressBar extends StatelessWidget {
-  final double savingsGoal;
-  final double savingsBalance;
+// Displays savings progress with a LinearProgressIndicator and peso labels
+class WalletSavingsGoal extends StatelessWidget {
+  final double currentSavings;
+  final double targetSavings;
 
-  const SavingsProgressBar({
+  const WalletSavingsGoal({
     super.key,
-    required this.savingsGoal,
-    required this.savingsBalance,
+    required this.currentSavings,
+    required this.targetSavings,
   });
 
-  double get savingsProgress => savingsBalance / savingsGoal;
+  double get progress => (currentSavings / targetSavings).clamp(0.0, 1.0);
 
   @override
   Widget build(BuildContext context) {
-    final Color barColor = AppColors.savingsColor(savingsProgress);
+    final Color barColor = AppColors.savingsColor(progress);
 
     return Card(
-      elevation: 4,
+      elevation: 3,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey, width: 1),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Title row with percentage
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -40,7 +41,7 @@ class SavingsProgressBar extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '${(savingsProgress * 100).toInt()}%',
+                  '${(progress * 100).toInt()}%',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -50,19 +51,23 @@ class SavingsProgressBar extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
+
+            // Progress bar
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: LinearProgressIndicator(
-                value: savingsProgress.clamp(0.0, 1.0),
+                value: progress,
                 minHeight: 12,
                 backgroundColor: Colors.grey[300],
                 valueColor: AlwaysStoppedAnimation<Color>(barColor),
               ),
             ),
             const SizedBox(height: 8),
+
+            // Peso amount label
             Text(
-              'Savings Goal: ₱${(savingsBalance).toStringAsFixed(2)}/₱${savingsGoal.toStringAsFixed(2)}',
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              '₱${currentSavings.toStringAsFixed(0)} / ₱${targetSavings.toStringAsFixed(0)}',
+              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
             ),
           ],
         ),
