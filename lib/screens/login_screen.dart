@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'register_screen.dart';
+import 'dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -202,6 +203,12 @@ class _LoginScreenState extends State<LoginScreen> {
                               print('Password: ${passwordController.text}');
                               print('Remember Me: $rememberMe');
                               print('──────────────────────────');
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const DashboardScreen(),
+                                ),
+                              );
                             },
 
                             style: ElevatedButton.styleFrom(
