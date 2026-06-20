@@ -12,7 +12,7 @@ class WalletSavingsGoal extends StatelessWidget {
     required this.targetSavings,
   });
 
-  double get progress => (currentSavings / targetSavings).clamp(0.0, 1.0);
+  double get progress => targetSavings > 0 ? (currentSavings / targetSavings).clamp(0.0, 1.0) : 0.0;
 
   @override
   Widget build(BuildContext context) {

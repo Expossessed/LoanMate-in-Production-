@@ -17,11 +17,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   int currentIndex = 0;
 
-  final List<Widget> tabPages = const [
-    HomeTab(),
-    LoanTab(),
-    EWalletTab(),
-    ProfileTab(),
+  final List<Widget> tabPages = [
+    const HomeTab(),
+    const LoanTab(),
+    const EWalletTab(),
+    const ProfileTab(),
   ];
 
   final List<String> tabTitles = const [

@@ -11,7 +11,7 @@ class SavingsProgressBar extends StatelessWidget {
     required this.savingsBalance,
   });
 
-  double get savingsProgress => savingsBalance / savingsGoal;
+  double get savingsProgress => savingsGoal > 0 ? savingsBalance / savingsGoal : 0.0;
 
   @override
   Widget build(BuildContext context) {
