@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
+import '../services/auth_service.dart';
 import 'register_screen.dart';
 import 'dashboard_screen.dart';
 
@@ -13,9 +14,11 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController studentIdController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
 
   bool rememberMe = false;
   bool obscurePassword = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -194,19 +197,29 @@ class _LoginScreenState extends State<LoginScreen> {
                           width: double.infinity,
                           height: 50,
                           child: ElevatedButton(
-                            onPressed: () {
-                              print('──────────────────────────');
-                              print('Logged in');
-                              print('Student ID: ${studentIdController.text}');
-                              print('Password: ${passwordController.text}');
-                              print('Remember Me: $rememberMe');
-                              print('──────────────────────────');
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const DashboardScreen(),
-                                ),
+                            onPressed: _isLoading ? null : () async {
+                              setState(() => _isLoading = true);
+                              final result = await _authService.signIn(
+                                studentId: studentIdController.text.trim(),
+                                password: passwordController.text.trim(),
                               );
+                              setState(() => _isLoading = false);
+
+                              if (result['success'] == true) {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const DashboardScreen(),
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(result['message'] ?? 'Login failed.'),
+                                    backgroundColor: Colors.red.shade700,
+                                  ),
+                                );
+                              }
                             },
 
                             style: ElevatedButton.styleFrom(
@@ -218,13 +231,22 @@ class _LoginScreenState extends State<LoginScreen> {
                               elevation: 2,
                             ),
 
-                            child: const Text(
-                              'Login',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                            child: _isLoading
+                                ? const SizedBox(
+                                    height: 22,
+                                    width: 22,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2.5,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Login',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
                           ),
                         ),
 

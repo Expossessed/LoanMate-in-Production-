@@ -1,17 +1,12 @@
-# loanmate
+`auth_service.dart` Handles user **sign up**, **sign in**, **sign out**, and **getting the current user's info**. Uses Supabase Auth which manages passwords securely.
+`loan_service.dart` Handles **applying for loans**, **viewing loan history**, **checking pending loans**, and admin actions like **approving/rejecting** loans. Also includes **AI evaluation** results.
+`wallet_service.dart` Handles the e-wallet: **checking balance**, **viewing payment history**, **auto-deduction logs**, **top-up**, and **withdrawal**.
+`profile_service.dart` Handles **fetching** and **updating** the user's profile information (name, course, contact number, etc.).
+`notification_service.dart` Handles **fetching notifications**, **marking individual notifications as read**, and **marking all as read**.
 
-A new Flutter project.
+<!-- Tech Stack -->
 
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Flutter | Mobile app framework (UI)  
+Dart | Programming language  
+Supabase | Backend (auth, database, storage)
+PostgreSQL | Database engine (used by Supabase)

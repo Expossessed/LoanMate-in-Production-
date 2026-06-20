@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
+import '../services/auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -26,7 +27,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   // Tracks whether the student has "uploaded" their document
   // (placeholder — will be replaced with real file-picker logic later)
   bool documentUploaded = false;
-
 
   @override
   void dispose() {
@@ -139,7 +139,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   //Register Checker
-  void handleRegister() {
+  void handleRegister() async {
     if (studentIdController.text.trim().isEmpty ||
         passwordController.text.trim().isEmpty ||
         confirmPasswordController.text.trim().isEmpty ||
@@ -176,17 +176,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    print('══════════════════════════════');
-    print('REGISTERED (dummy data)');
-    print('Student ID : ${studentIdController.text}');
-    print(
-      'Name       : ${firstNameController.text} ${lastNameController.text}',
+    // Call AuthService to create the account in Supabase
+    final result = await AuthService().signUp(
+      studentId: studentIdController.text.trim(),
+      password: passwordController.text.trim(),
+      firstName: firstNameController.text.trim(),
+      lastName: lastNameController.text.trim(),
+      course: courseController.text.trim(),
+      yearLevel: yearLevelController.text.trim(),
     );
-    print('Course     : ${courseController.text}');
-    print('Year Level : ${yearLevelController.text}');
-    print('══════════════════════════════');
 
-    showRegisteredDialog();
+    if (result['success'] == true) {
+      showRegisteredDialog();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message'] ?? 'Registration failed.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   //Register UI
@@ -404,7 +413,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: AppColors.primaryGreen,
-                                side: const BorderSide(color: AppColors.primaryGreen),
+                                side: const BorderSide(
+                                  color: AppColors.primaryGreen,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
