@@ -1,16 +1,10 @@
-// ============================================================================
-// 🔔 NOTIFICATION SERVICE — Handles fetching notifications for the user.
-// HOW TO SWITCH: Uncomment "🔜 SUPABASE VERSION", delete "🟢 DUMMY VERSION"
-// ============================================================================
-
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final supabase = Supabase.instance.client;
 
 class NotificationService {
-  // ── GET NOTIFICATIONS — Fetch all notifications for a user ──
+  //Get all notifications for the specific user
   Future<List<Map<String, dynamic>>> getNotifications(String userId) async {
-    // 🔜 SUPABASE VERSION (uncomment when Supabase project is ready):
     try {
       final response = await supabase
           .from('notifications')
@@ -24,9 +18,8 @@ class NotificationService {
     }
   }
 
-  // ── MARK AS READ — Mark a single notification as read ──
+  //mark notification as read
   Future<void> markAsRead(String notificationId) async {
-    // 🔜 SUPABASE VERSION (uncomment when Supabase project is ready):
     try {
       await supabase
           .from('notifications')
@@ -37,9 +30,8 @@ class NotificationService {
     }
   }
 
-  // ── MARK ALL AS READ — Mark all notifications for a user as read ──
+  //mark all notifications as read
   Future<void> markAllAsRead(String userId) async {
-    // 🔜 SUPABASE VERSION (uncomment when Supabase project is ready):
     try {
       await supabase
           .from('notifications')

@@ -1,16 +1,10 @@
-// ============================================================================
-// 👤 PROFILE SERVICE — Handles fetching and updating user profile data.
-// HOW TO SWITCH: Uncomment "🔜 SUPABASE VERSION", delete "🟢 DUMMY VERSION"
-// ============================================================================
-
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final supabase = Supabase.instance.client;
 
 class ProfileService {
-  // ── GET PROFILE — Fetch the user's full profile from the database ──
+  //get the profile from the database
   Future<Map<String, dynamic>> getProfile(String userId) async {
-    // 🔜 SUPABASE VERSION (uncomment when Supabase project is ready):
     try {
       final response = await supabase
           .from('users')
@@ -24,7 +18,7 @@ class ProfileService {
     }
   }
 
-  // ── UPDATE PROFILE — Save changes to the user's profile ──
+  //update profile
   Future<Map<String, dynamic>> updateProfile({
     required String userId,
     String? firstName,
@@ -34,9 +28,7 @@ class ProfileService {
     String? address,
     String? contactNumber,
   }) async {
-    // 🔜 SUPABASE VERSION (uncomment when Supabase project is ready):
     try {
-      // Build the update map — only include fields that were provided
       final Map<String, dynamic> updates = {};
       if (firstName != null) updates['first_name'] = firstName;
       if (lastName != null) updates['last_name'] = lastName;

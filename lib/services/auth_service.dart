@@ -14,6 +14,7 @@ class AuthService {
     required String course,
     required String yearLevel,
   }) async {
+    //Creation of the row on the supabase
     try {
       final AuthResponse response = await supabase.auth.signUp(
         email: toEmail(studentId),
@@ -30,8 +31,8 @@ class AuthService {
           'last_name': lastName,
           'course': course,
           'year_level': yearLevel,
-          'enrollment_status': 'active',
-          'role': 'student',
+          'enrollment_status': 'Active',
+          'role': 'Student',
           'agreed_to_terms': true,
           'created_at': DateTime.now().toIso8601String(),
         });
@@ -53,8 +54,9 @@ class AuthService {
             .insert({
               'user_id': userId,
               'amount': 0.0,
-              'purpose': 'placeholder',
-              'status': 'pending',
+              'purpose': 'Placeholder',
+              'status': 'Pending',
+              'ai_evaluation': 'Pending',
               'applied_at': DateTime.now().toIso8601String(),
             })
             .select('id')
@@ -65,7 +67,16 @@ class AuthService {
           'loan_id': loanId,
           'due_date': DateTime.now().toIso8601String().substring(0, 10),
           'amount': 0.0,
-          'status': 'pending',
+          'status': 'Pending',
+        });
+
+        await supabase.from('active_loans').insert({
+          'loan_id': loanId,
+          'user_id': userId,
+          'original_amount': 0.0,
+          'remaining_balance': 0.0,
+          'monthly_payment': 0.0,
+          'start_date': DateTime.now().toIso8601String().substring(0, 10),
         });
 
         await supabase.from('documents').insert({
@@ -77,7 +88,7 @@ class AuthService {
 
         await supabase.from('notifications').insert({
           'user_id': userId,
-          'type': 'welcome',
+          'type': 'Welcome',
           'message': 'Welcome to LoanMate!',
           'is_read': false,
           'created_at': DateTime.now().toIso8601String(),
@@ -88,23 +99,22 @@ class AuthService {
           'type': 'init',
           'amount': 0.0,
           'date': DateTime.now().toIso8601String(),
-          'description': 'Account created',
+          'description': 'Account Created',
         });
 
-        return {'success': true, 'message': 'Registration successful!'};
+        return {'success': true, 'message': 'Registration Successful!'};
       } else {
-        return {'success': false, 'message': 'Sign up failed. Try again.'};
+        return {'success': false, 'message': 'Sign Up Failed. Try again.'};
       }
     } on AuthException catch (e) {
-      // Give user-friendly error messages instead of raw Supabase errors
       if (e.message.contains('rate limit') || e.statusCode == '429') {
         return {
           'success': false,
           'message': 'Too many attempts. Please wait a minute and try again.',
         };
       }
-      if (e.message.contains('already registered') ||
-          e.message.contains('already been registered')) {
+      if (e.message.contains('Already Registered') ||
+          e.message.contains('Already been Registered')) {
         return {
           'success': false,
           'message': 'This Student ID is already registered. Try logging in.',
@@ -112,7 +122,6 @@ class AuthService {
       }
       return {'success': false, 'message': 'Auth error: ${e.message}'};
     } on PostgrestException catch (e) {
-      // A table insert failed — log the real Postgres error for debugging.
       debugPrint('Registration DB insert failed:');
       debugPrint('  code   : ${e.code}');
       debugPrint('  message: ${e.message}');
@@ -127,7 +136,7 @@ class AuthService {
     }
   }
 
-  // ── SIGN IN ──
+  //Sign In
   Future<Map<String, dynamic>> signIn({
     required String studentId,
     required String password,
@@ -139,26 +148,26 @@ class AuthService {
       );
 
       if (response.user != null) {
-        return {'success': true, 'message': 'Login successful!'};
+        return {'success': true, 'message': 'Login Successful!'};
       } else {
-        return {'success': false, 'message': 'Invalid credentials.'};
+        return {'success': false, 'message': 'Invalid Credentials.'};
       }
     } on AuthException catch (e) {
       if (e.message.contains('Invalid login')) {
-        return {'success': false, 'message': 'Wrong Student ID or password.'};
+        return {'success': false, 'message': 'Wrong Student ID or Password.'};
       }
-      return {'success': false, 'message': 'Login error: ${e.message}'};
+      return {'success': false, 'message': 'Login Error: ${e.message}'};
     } catch (e) {
       return {'success': false, 'message': 'Error: ${e.toString()}'};
     }
   }
 
-  // ── SIGN OUT ──
+  //Sign Out
   Future<void> signOut() async {
     await supabase.auth.signOut();
   }
 
-  // ── GET CURRENT USER ──
+  //get the current user
   Future<Map<String, dynamic>?> getCurrentUser() async {
     final user = supabase.auth.currentUser;
     if (user == null) return null;
@@ -171,7 +180,7 @@ class AuthService {
           .single();
       return response;
     } catch (e) {
-      print('Error fetching current user: $e');
+      print('Error Fetching Current User: $e');
       return null;
     }
   }
