@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 class AppColors {
   static const Color primaryGreen = Color(0xFF2E7D32);
   static const Color accentBlue = Color(0xFF1565C0);
+  static const Color backgroundCream = Color(0xFFF3EBE1);
+  static const Color cardCream = Color(0xFFFAF7F2);
 
   static Color statusColor(String s) {
     switch (s.toLowerCase()) {

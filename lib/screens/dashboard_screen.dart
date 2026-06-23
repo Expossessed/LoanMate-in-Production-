@@ -14,15 +14,13 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
 
-
   int currentIndex = 0;
 
-  final List<Widget> tabPages = [
-    const HomeTab(),
-    const LoanTab(),
-    const EWalletTab(),
-    const ProfileTab(),
-  ];
+  // GlobalKeys let us call reload methods on child tabs
+  final GlobalKey<HomeTabState> _homeKey = GlobalKey<HomeTabState>();
+  final GlobalKey<EWalletTabState> _walletKey = GlobalKey<EWalletTabState>();
+
+  late final List<Widget> tabPages;
 
   final List<String> tabTitles = const [
     'LoanMate',
@@ -32,57 +30,96 @@ class _DashboardScreenState extends State<DashboardScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    tabPages = [
+      HomeTab(key: _homeKey),
+      const LoanTab(),
+      EWalletTab(
+        key: _walletKey,
+        onDataChanged: _onWalletDataChanged,
+      ),
+      const ProfileTab(),
+    ];
+  }
+
+  /// Called by EWalletTab whenever a transaction mutates the database.
+  /// Forces the Home tab to re-fetch so its balance / savings are in sync.
+  void _onWalletDataChanged() {
+    _homeKey.currentState?.reloadData();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: AppColors.backgroundCream,
 
-      appBar: AppBar(
-        title: Text(
-          tabTitles[currentIndex],
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.2,
+      body: IndexedStack(
+        index: currentIndex,
+        children: tabPages,
+      ),
+
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: AppColors.cardCream,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -5),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8),
+            child: BottomNavigationBar(
+              currentIndex: currentIndex,
+              onTap: (index) {
+                setState(() {
+                  currentIndex = index;
+                });
+                // Refresh the tab we're switching to
+                if (index == 0) {
+                  _homeKey.currentState?.reloadData();
+                } else if (index == 2) {
+                  _walletKey.currentState?.reloadData();
+                }
+              },
+              type: BottomNavigationBarType.fixed,
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              selectedItemColor: AppColors.primaryGreen,
+              unselectedItemColor: Colors.grey.shade500,
+              selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11, letterSpacing: 0.5),
+              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 10, letterSpacing: 0.5),
+              items: [
+                _buildNavItem(Icons.home_filled, Icons.home_outlined, 'HOME', currentIndex == 0),
+                _buildNavItem(Icons.description, Icons.description_outlined, 'LOAN', currentIndex == 1),
+                _buildNavItem(Icons.account_balance_wallet, Icons.account_balance_wallet_outlined, 'WALLET', currentIndex == 2),
+                _buildNavItem(Icons.person, Icons.person_outline, 'PROFILE', currentIndex == 3),
+              ],
+            ),
           ),
         ),
-        centerTitle: true,
-        backgroundColor: AppColors.primaryGreen,
-        foregroundColor: Colors.white,
-        elevation: 2,
       ),
+    );
+  }
 
-      body: tabPages[currentIndex],
-
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: currentIndex,
-        onTap: (index) {
-          setState(() {
-            currentIndex = index;
-          });
-        },
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: AppColors.primaryGreen,
-        unselectedItemColor: Colors.grey,
-        selectedFontSize: 12,
-        unselectedFontSize: 12,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_rounded),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.receipt_long_rounded),
-            label: 'Loan',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.account_balance_wallet_rounded),
-            label: 'E-Wallet',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_rounded),
-            label: 'Profile',
-          ),
-        ],
+  BottomNavigationBarItem _buildNavItem(IconData activeIcon, IconData inactiveIcon, String label, bool isSelected) {
+    return BottomNavigationBarItem(
+      icon: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primaryGreen : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Icon(
+          isSelected ? activeIcon : inactiveIcon,
+          color: isSelected ? Colors.white : Colors.grey.shade500,
+        ),
       ),
+      label: label,
     );
   }
 }

@@ -1,27 +1,21 @@
-// ============================================================================
-// 💰 LOAN SERVICE — Handles everything related to loans.
-// HOW TO SWITCH: Uncomment "🔜 SUPABASE VERSION", delete "🟢 DUMMY VERSION"
-// ============================================================================
-
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final supabase = Supabase.instance.client;
 
 class LoanService {
-  // ── APPLY FOR LOAN ──
+  //applying for loan
   Future<Map<String, dynamic>> applyForLoan({
     required String userId,
     required double amount,
     required String purpose,
   }) async {
-    // 🔜 SUPABASE VERSION (uncomment when Supabase project is ready):
     try {
       await supabase.from('loans').insert({
         'user_id': userId,
         'amount': amount,
         'purpose': purpose,
-        'status': 'pending',
-        'ai_evaluation': 'pending',
+        'status': 'Pending',
+        'ai_evaluation': 'Pending',
         'applied_at': DateTime.now().toIso8601String(),
       });
       return {'success': true, 'message': 'Loan application submitted!'};
@@ -30,9 +24,8 @@ class LoanService {
     }
   }
 
-  // ── GET LOAN HISTORY ──
+  //getting loan history
   Future<List<Map<String, dynamic>>> getLoanHistory(String userId) async {
-    // 🔜 SUPABASE VERSION (uncomment when Supabase project is ready):
     try {
       final response = await supabase
           .from('loans')
@@ -46,11 +39,10 @@ class LoanService {
     }
   }
 
-  // ── GET PENDING LOANS ──
+  // pending loans
   Future<List<Map<String, dynamic>>> getPendingLoans({String? userId}) async {
-    // 🔜 SUPABASE VERSION (uncomment when Supabase project is ready):
     try {
-      var query = supabase.from('loans').select().eq('status', 'pending');
+      var query = supabase.from('loans').select().eq('status', 'Pending');
       if (userId != null) query = query.eq('user_id', userId);
       final response = await query.order('applied_at', ascending: false);
       return List<Map<String, dynamic>>.from(response);
@@ -60,9 +52,8 @@ class LoanService {
     }
   }
 
-  // ── APPROVE LOAN (Admin) ──
+  // approve loan (to be done with AI)
   Future<Map<String, dynamic>> approveLoan(String loanId) async {
-    // 🔜 SUPABASE VERSION (uncomment when Supabase project is ready):
     try {
       await supabase
           .from('loans')
@@ -77,9 +68,8 @@ class LoanService {
     }
   }
 
-  // ── REJECT LOAN (Admin) ──
+  // reject loan (to be done with AI)
   Future<Map<String, dynamic>> rejectLoan(String loanId) async {
-    // 🔜 SUPABASE VERSION (uncomment when Supabase project is ready):
     try {
       await supabase
           .from('loans')
@@ -91,9 +81,8 @@ class LoanService {
     }
   }
 
-  // ── GET AI EVALUATION ──
+  // AI evaluation if they are eligible or not
   Future<Map<String, String>> getAiEvaluation(String userId) async {
-    // 🔜 SUPABASE VERSION (uncomment when Supabase project is ready):
     try {
       final response = await supabase
           .from('loans')

@@ -1,13 +1,9 @@
-// ============================================================================
-// 💳 WALLET SERVICE — Handles wallet balance, payments, and auto-deductions.
-// ============================================================================
-
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final supabase = Supabase.instance.client;
 
 class WalletService {
-  // ── GET BALANCE ──
+  //get balance
   Future<Map<String, dynamic>> getBalance(String userId) async {
     try {
       final response = await supabase
@@ -22,7 +18,7 @@ class WalletService {
     }
   }
 
-  // ── GET PAYMENT HISTORY ──
+  //get payments
   Future<List<Map<String, String>>> getPaymentHistory(String userId) async {
     try {
       final wallet = await supabase
@@ -38,7 +34,6 @@ class WalletService {
           .eq('type', 'payment')
           .order('date', ascending: false);
 
-      // Convert each DB row into the format your widgets expect
       return List<Map<String, String>>.from(
         response.map((item) {
           return {
