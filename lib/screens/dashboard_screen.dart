@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../tabs/home_tab.dart';
+import '../tabs/apply_tab.dart';
 import '../tabs/loan_tab.dart';
 import '../tabs/ewallet_tab.dart';
 import '../tabs/profile_tab.dart';
@@ -23,8 +24,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   late final List<Widget> tabPages;
 
   final List<String> tabTitles = const [
-    'LoanMate',
-    'My Loans',
+    'Home',
+    'Apply',
+    'Track',
     'E-Wallet',
     'Profile',
   ];
@@ -34,6 +36,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.initState();
     tabPages = [
       HomeTab(key: _homeKey),
+      const ApplyTab(),
       const LoanTab(),
       EWalletTab(
         key: _walletKey,
@@ -82,7 +85,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 // Refresh the tab we're switching to
                 if (index == 0) {
                   _homeKey.currentState?.reloadData();
-                } else if (index == 2) {
+                } else if (index == 3) {
                   _walletKey.currentState?.reloadData();
                 }
               },
@@ -95,9 +98,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 10, letterSpacing: 0.5),
               items: [
                 _buildNavItem(Icons.home_filled, Icons.home_outlined, 'HOME', currentIndex == 0),
-                _buildNavItem(Icons.description, Icons.description_outlined, 'LOAN', currentIndex == 1),
-                _buildNavItem(Icons.account_balance_wallet, Icons.account_balance_wallet_outlined, 'WALLET', currentIndex == 2),
-                _buildNavItem(Icons.person, Icons.person_outline, 'PROFILE', currentIndex == 3),
+                _buildNavItem(Icons.description, Icons.description_outlined, 'APPLY', currentIndex == 1),
+                _buildNavItem(Icons.trending_up, Icons.trending_up, 'TRACK', currentIndex == 2),
+                _buildNavItem(Icons.account_balance_wallet, Icons.account_balance_wallet_outlined, 'WALLET', currentIndex == 3),
+                _buildNavItem(Icons.person, Icons.person_outline, 'PROFILE', currentIndex == 4),
               ],
             ),
           ),

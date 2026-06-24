@@ -40,7 +40,7 @@ BEGIN
   INSERT INTO wallet (id, user_id, balance, savings_goal, current_savings)
   VALUES (v_wallet_id, p_user_id, 0, 0, 0);
 
-  -- 3. loans  (placeholder row so FKs in child tables can be satisfied)
+  -- 3. loans  (placeholder row)
   INSERT INTO loans (id, user_id, amount, purpose, status, applied_at)
   VALUES (v_loan_id, p_user_id, 0, 'placeholder', 'pending', now());
 
@@ -52,17 +52,17 @@ BEGIN
   INSERT INTO documents (id, user_id, loan_id, file_url, uploaded_at)
   VALUES (gen_random_uuid(), p_user_id, v_loan_id, NULL, now());
 
-  -- 6. notifications  (welcome message)
+  -- 6. notifications  
   INSERT INTO notifications (id, user_id, type, message, is_read, created_at)
   VALUES (gen_random_uuid(), p_user_id, 'welcome', 'Welcome to LoanMate!', false, now());
 
-  -- 7. transactions  ← `date` column is REQUIRED and was previously missing
+  -- 7. transactions
   INSERT INTO transactions (id, wallet_id, type, amount, date, description)
   VALUES (gen_random_uuid(), v_wallet_id, 'init', 0, now(), 'Account created');
 END;
 $$;
 
--- Grant EXECUTE to authenticated users only; revoke from the PUBLIC pseudo-role.
+-- Granting execute to authenticated users only; revoke from the PUBLIC pseudo-role.
 GRANT EXECUTE ON FUNCTION public.complete_student_registration(uuid, text, text, text, text, text)
   TO authenticated;
 REVOKE EXECUTE ON FUNCTION public.complete_student_registration(uuid, text, text, text, text, text)

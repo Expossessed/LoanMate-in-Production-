@@ -3,12 +3,12 @@ import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
-import '../widgets/loan/apply_loan_button.dart';
-import '../widgets/loan/ai_evaluation_card.dart';
-import '../widgets/loan/active_loans_section.dart';
-import '../widgets/loan/pending_loans_section.dart';
-import '../widgets/loan/loan_history_section.dart';
-import '../widgets/loan/recent_activity_section.dart';
+import '../widgets/track_loan/apply_loan_button.dart';
+import '../widgets/track_loan/ai_evaluation_card.dart';
+import '../widgets/track_loan/active_loans_section.dart';
+import '../widgets/track_loan/pending_loans_section.dart';
+import '../widgets/track_loan/loan_history_section.dart';
+import '../widgets/track_loan/recent_activity_section.dart';
 
 class LoanTab extends StatefulWidget {
   const LoanTab({super.key});
