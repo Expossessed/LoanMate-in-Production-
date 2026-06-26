@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../constants/app_colors.dart';
 
 // Shows the remaining loan balance in a styled card
 class RemainingLoanCard extends StatelessWidget {

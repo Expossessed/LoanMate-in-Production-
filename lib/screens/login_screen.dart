@@ -1,5 +1,5 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
 import '../services/auth_service.dart';
 import 'register_screen.dart';
@@ -20,11 +20,96 @@ class _LoginScreenState extends State<LoginScreen> {
   bool obscurePassword = true;
   bool _isLoading = false;
 
+  // ── Lockout state ──────────────────────────────────────────────────────
+  bool _isLocked = false;
+  int _remainingSeconds = 0;
+  Timer? _lockoutTimer;
+
   @override
   void dispose() {
     studentIdController.dispose();
     passwordController.dispose();
+    _lockoutTimer?.cancel();
     super.dispose();
+  }
+
+  // ── Lockout countdown ─────────────────────────────────────────────────
+  void _startLockoutCountdown(int seconds) {
+    _lockoutTimer?.cancel();
+    setState(() {
+      _isLocked = true;
+      _remainingSeconds = seconds;
+    });
+    _lockoutTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        _remainingSeconds--;
+        if (_remainingSeconds <= 0) {
+          _isLocked = false;
+          _remainingSeconds = 0;
+          timer.cancel();
+        }
+      });
+    });
+  }
+
+  String get _lockoutLabel {
+    final m = _remainingSeconds ~/ 60;
+    final s = _remainingSeconds % 60;
+    return m > 0
+        ? 'Try again in ${m}m ${s.toString().padLeft(2, '0')}s'
+        : 'Try again in ${s}s';
+  }
+
+  // ── Sign-in handler ───────────────────────────────────────────────────
+  Future<void> _handleSignIn() async {
+    if (_isLocked) return;
+
+    final studentId = studentIdController.text.trim();
+    final password = passwordController.text.trim();
+
+    if (studentId.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter your Student ID and password.'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 1),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    final result = await _authService.signIn(
+      studentId: studentId,
+      password: password,
+    );
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (result['success'] == true) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const DashboardScreen()),
+      );
+    } else {
+      // Trigger lockout countdown if the response says locked
+      if (result['locked'] == true) {
+        final secs = (result['remaining_seconds'] as int?) ?? 300;
+        _startLockoutCountdown(secs);
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message'] ?? 'Login failed.'),
+          backgroundColor: Colors.red.shade700,
+          duration: const Duration(seconds: 1),
+        ),
+      );
+    }
   }
 
   @override
@@ -35,7 +120,7 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Top Dark Section
+            // ── Top Green Header ──────────────────────────────────────
             Container(
               padding: const EdgeInsets.only(
                 top: 70.0,
@@ -78,9 +163,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                   const SizedBox(height: 40),
-                  Text(
+                  const Text(
                     'Your money,\nyour future.',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Arial',
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.5,
@@ -91,7 +176,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 16),
                   const Text(
-                    'UST Student Financial Services',
+                    'UCLM Student Financial Services',
                     style: TextStyle(
                       color: Colors.white70,
                       fontSize: 16,
@@ -101,15 +186,15 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
 
-            // Bottom Form Section
+            // ── Form Section ──────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.all(30.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  const Text(
                     'Sign in to your account',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Arial',
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.5,
@@ -119,7 +204,39 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 30),
 
-                  // Student ID Field
+                  // ── Lockout Banner ──────────────────────────────────
+                  if (_isLocked) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.red.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.lock_clock_rounded,
+                              color: Colors.red.shade700, size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Account temporarily locked.\n$_lockoutLabel',
+                              style: TextStyle(
+                                color: Colors.red.shade700,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+
+                  // ── Student ID ──────────────────────────────────────
                   const Text(
                     'STUDENT ID',
                     style: TextStyle(
@@ -132,6 +249,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 8),
                   TextField(
                     controller: studentIdController,
+                    enabled: !_isLocked,
                     decoration: InputDecoration(
                       hintText: 'Enter your Student ID',
                       hintStyle: const TextStyle(color: Colors.black54),
@@ -139,22 +257,31 @@ class _LoginScreenState extends State<LoginScreen> {
                       fillColor: AppColors.cardCream,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+                        borderSide:
+                            BorderSide(color: Colors.grey.shade300),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+                        borderSide:
+                            BorderSide(color: Colors.grey.shade300),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppColors.primaryGreen, width: 2),
+                        borderSide: const BorderSide(
+                            color: AppColors.primaryGreen, width: 2),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      disabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide:
+                            BorderSide(color: Colors.grey.shade200),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 16),
                     ),
                   ),
                   const SizedBox(height: 20),
 
-                  // Password Field
+                  // ── Password ────────────────────────────────────────
                   const Text(
                     'PASSWORD',
                     style: TextStyle(
@@ -168,6 +295,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextField(
                     controller: passwordController,
                     obscureText: obscurePassword,
+                    enabled: !_isLocked,
                     decoration: InputDecoration(
                       hintText: '••••••••',
                       hintStyle: const TextStyle(color: Colors.black54),
@@ -175,27 +303,40 @@ class _LoginScreenState extends State<LoginScreen> {
                       fillColor: AppColors.cardCream,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+                        borderSide:
+                            BorderSide(color: Colors.grey.shade300),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+                        borderSide:
+                            BorderSide(color: Colors.grey.shade300),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppColors.primaryGreen, width: 2),
+                        borderSide: const BorderSide(
+                            color: AppColors.primaryGreen, width: 2),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      disabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide:
+                            BorderSide(color: Colors.grey.shade200),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 16),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                          obscurePassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
                           color: Colors.grey,
                         ),
-                        onPressed: () {
-                          setState(() {
-                            obscurePassword = !obscurePassword;
-                          });
-                        },
+                        onPressed: _isLocked
+                            ? null
+                            : () {
+                                setState(() {
+                                  obscurePassword = !obscurePassword;
+                                });
+                              },
                       ),
                     ),
                   ),
@@ -214,40 +355,20 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 20),
 
-                  // Sign In Button
+                  // ── Sign In Button ──────────────────────────────────
                   SizedBox(
                     width: double.infinity,
                     height: 54,
                     child: ElevatedButton(
-                      onPressed: _isLoading ? null : () async {
-                        setState(() => _isLoading = true);
-                        final result = await _authService.signIn(
-                          studentId: studentIdController.text.trim(),
-                          password: passwordController.text.trim(),
-                        );
-                        setState(() => _isLoading = false);
-
-                        if (result['success'] == true) {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const DashboardScreen(),
-                            ),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(result['message'] ?? 'Login failed.'),
-                              backgroundColor: Colors.red.shade700,
-                            ),
-                          );
-                        }
-                      },
+                      onPressed:
+                          (_isLoading || _isLocked) ? null : _handleSignIn,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primaryGreen,
+                        disabledBackgroundColor: _isLocked
+                            ? Colors.red.shade100
+                            : Colors.grey.shade300,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
@@ -263,42 +384,64 @@ class _LoginScreenState extends State<LoginScreen> {
                                 strokeWidth: 2.5,
                               ),
                             )
-                          : const Text(
-                              'Sign In',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                          : _isLocked
+                              ? Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.lock_rounded,
+                                        size: 18,
+                                        color: Colors.red.shade400),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      _lockoutLabel,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.red.shade500,
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : const Text(
+                                  'Sign In',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                     ),
                   ),
 
                   const SizedBox(height: 24),
-                  
-                  // Or divider
+
+                  // ── Divider ──────────────────────────────────────────
                   Row(
                     children: [
                       const Expanded(child: Divider()),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
                           'or',
-                          style: TextStyle(color: Colors.grey.shade500),
+                          style:
+                              TextStyle(color: Colors.grey.shade500),
                         ),
                       ),
                       const Expanded(child: Divider()),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 24),
-                  
-                  // SSO Button
+
+                  // ── SSO Button ────────────────────────────────────────
                   SizedBox(
                     width: double.infinity,
                     height: 54,
                     child: OutlinedButton.icon(
                       onPressed: () {},
-                      icon: const Icon(Icons.book_outlined, color: AppColors.primaryGreen),
+                      icon: const Icon(Icons.book_outlined,
+                          color: AppColors.primaryGreen),
                       label: const Text(
                         'Continue with University SSO',
                         style: TextStyle(
@@ -318,7 +461,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const SizedBox(height: 30),
 
-                  // Register
+                  // ── Register link ─────────────────────────────────────
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -331,7 +474,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const RegisterScreen(),
+                              builder: (context) =>
+                                  const RegisterScreen(),
                             ),
                           );
                         },
@@ -346,6 +490,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 60),
                 ],
               ),
             ),

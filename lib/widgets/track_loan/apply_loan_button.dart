@@ -15,7 +15,7 @@ class ApplyLoanButton extends StatelessWidget {
             const SnackBar(
               content: Text('Loan application submitted!'),
               backgroundColor: AppColors.primaryGreen,
-              duration: Duration(seconds: 2),
+              duration: Duration(seconds: 1),
             ),
           );
         },

@@ -371,19 +371,13 @@ class EWalletTabState extends State<EWalletTab> {
 
     try {
       final newBalance = walletBalance - actualPayment;
-      print(
-        'DEBUG PayLoan: updating wallet balance to $newBalance for user ${user.id}',
-      );
       final updateResult = await supabase
           .from('wallet')
           .update({'balance': newBalance})
           .eq('user_id', user.id)
           .select();
-      print('DEBUG PayLoan: wallet update result = $updateResult');
       if (updateResult.isEmpty) {
-        throw Exception(
-          'Wallet update returned empty — check RLS policies on the wallet table.',
-        );
+        throw Exception('Wallet update returned empty, please report to us!');
       }
       final txResult = await supabase.from('transactions').insert({
         'wallet_id': walletId,
@@ -392,7 +386,6 @@ class EWalletTabState extends State<EWalletTab> {
         'date': DateTime.now().toIso8601String(),
         'description': 'Paid',
       }).select();
-      print('DEBUG PayLoan: transaction insert result = $txResult');
 
       setState(() {
         walletBalance = newBalance;
@@ -462,21 +455,8 @@ class EWalletTabState extends State<EWalletTab> {
       );
       return;
     }
-    if (currentSavings >= targetSavings) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Savings goal already reached! 🎉'),
-          backgroundColor: AppColors.primaryGreen,
-          duration: Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
 
-    final double maxCanSave = targetSavings - currentSavings;
-    final double actualSavings = parsedAmount > maxCanSave
-        ? maxCanSave
-        : parsedAmount;
+    final double actualSavings = parsedAmount;
 
     try {
       final newBalance = walletBalance - actualSavings;
@@ -517,9 +497,9 @@ class EWalletTabState extends State<EWalletTab> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '₱${actualSavings.toStringAsFixed(2)} added to savings! Progress: ₱${currentSavings.toStringAsFixed(0)}/₱${targetSavings.toStringAsFixed(0)}',
+            '₱${actualSavings.toStringAsFixed(2)} added to savings! Total: ₱${newSavings.toStringAsFixed(0)}',
           ),
-          backgroundColor: AppColors.accentBlue,
+          backgroundColor: AppColors.primaryGreen,
           duration: const Duration(seconds: 3),
         ),
       );
@@ -834,63 +814,59 @@ class EWalletTabState extends State<EWalletTab> {
                   ],
                 ),
                 const SizedBox(height: 30),
-                const Text(
-                  'Available Balance',
-                  style: TextStyle(color: Colors.white70, fontSize: 13),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '₱${walletBalance.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontFamily: 'Arial',
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.5,
-                    color: Colors.white,
-                    fontSize: 48,
-                    height: 1,
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(24),
                   ),
-                ),
-                const SizedBox(height: 32),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: handleTopUp,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: AppColors.primaryGreen,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          elevation: 0,
-                        ),
-                        child: const Text(
-                          'Add Money',
-                          style: TextStyle(fontWeight: FontWeight.w700),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'AVAILABLE BALANCE',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 1.2,
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: handleWithdraw,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white.withOpacity(0.15),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          elevation: 0,
-                        ),
-                        child: const Text(
-                          'Withdraw',
-                          style: TextStyle(fontWeight: FontWeight.w700),
+                      const SizedBox(height: 4),
+                      Text(
+                        '₱${walletBalance.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontFamily: 'Arial',
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.5,
+                          color: Colors.white,
+                          fontSize: 42,
+                          height: 1,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.savings_outlined,
+                            color: Colors.white54,
+                            size: 14,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Savings: ₱${currentSavings.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              color: Colors.white54,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              fontFamily: 'monospace',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -941,9 +917,9 @@ class EWalletTabState extends State<EWalletTab> {
                   const SizedBox(height: 24),
                 ],
 
-                // Savings Goal Section
+                // Monthly Savings Goal Section
                 Text(
-                  'Savings Goal',
+                  'Monthly Savings Goal',
                   style: const TextStyle(
                     fontFamily: 'Arial',
                     fontWeight: FontWeight.w700,
