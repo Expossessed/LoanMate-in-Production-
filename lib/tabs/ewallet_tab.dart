@@ -11,6 +11,8 @@ import '../widgets/wallet/auto_deduction_log.dart';
 import '../widgets/wallet/wallet_payment_history.dart';
 import '../widgets/wallet/wallet_action_buttons.dart';
 import '../widgets/wallet/insufficient_balance_warning.dart';
+import '../widgets/wallet/wallet_transaction_list.dart';
+import '../widgets/wallet/wallet_paid_repayments.dart';
 
 class EWalletTab extends StatefulWidget {
   /// Callback fired after any transaction mutates the database
@@ -32,14 +34,21 @@ class EWalletTabState extends State<EWalletTab> {
   double currentSavings = 0.0;
   double targetSavings = 0.0;
   DateTime nextPaymentDate = DateTime.now().add(const Duration(days: 30));
-  final double monthlyPayment = 1000.00;
+  double monthlyPayment = 0.0;
 
   final TextEditingController payAmountController = TextEditingController();
 
-  bool get hasInsufficientBalance => walletBalance < monthlyPayment;
+  bool get hasInsufficientBalance =>
+      monthlyPayment > 0 && walletBalance < monthlyPayment;
   String get autoDeductionSchedule =>
       DateFormat('MMMM dd, yyyy').format(nextPaymentDate);
 
+  // Full transactions list (all types)
+  List<Map<String, String>> transactions = [];
+  // Paid repayment_schedule rows (separate payment history section)
+  List<Map<String, String>> paidRepayments = [];
+
+  // Legacy — kept so existing handlers that insert still compile
   List<Map<String, String>> paymentHistory = [];
   List<Map<String, String>> autoDeductionEntries = [];
 
@@ -61,95 +70,137 @@ class EWalletTabState extends State<EWalletTab> {
     final user = supabase.auth.currentUser;
     if (user == null) return;
 
+    // Reset lists
+    transactions = [];
+    paidRepayments = [];
+    paymentHistory = [];
+    autoDeductionEntries = [];
+
     try {
-      // 1) Fetch wallet
+      // 1) Fetch wallet → balance, savings_goal, current_savings
       try {
         final wallet = await supabase
             .from('wallet')
-            .select()
+            .select('id, balance, savings_goal, current_savings')
             .eq('user_id', user.id)
             .single();
         walletBalance = (wallet['balance'] as num?)?.toDouble() ?? 0.0;
         targetSavings = (wallet['savings_goal'] as num?)?.toDouble() ?? 5000.0;
-        currentSavings = (wallet['current_savings'] as num?)?.toDouble() ?? 0.0;
-        walletId = wallet['id'];
-      } catch (_) {}
+        currentSavings =
+            (wallet['current_savings'] as num?)?.toDouble() ?? 0.0;
+        walletId = wallet['id']?.toString();
+      } catch (e) {
+        print('wallet fetch error: $e');
+      }
 
-      // 2) Fetch remaining loan balance (sum of approved loan amounts minus paid)
+      // 2) Fetch remaining loan balance from active_loans
       try {
-        final approved = await supabase
-            .from('loans')
-            .select('amount')
-            .eq('user_id', user.id)
-            .inFilter('status', ['approved', 'active', 'partial']);
-        double total = 0;
-        for (var loan in approved) {
-          total += (loan['amount'] as num).toDouble();
+        final activeRows = await supabase
+            .from('active_loans')
+            .select('remaining_balance, monthly_payment')
+            .eq('user_id', user.id);
+        double totalRemaining = 0;
+        double latestMonthly = 0;
+        for (final a in activeRows) {
+          totalRemaining += (a['remaining_balance'] as num?)?.toDouble() ?? 0;
+          latestMonthly =
+              (a['monthly_payment'] as num?)?.toDouble() ?? latestMonthly;
         }
-        remainingLoanBalance = total;
-      } catch (_) {}
+        remainingLoanBalance = totalRemaining;
+        monthlyPayment = latestMonthly;
+      } catch (e) {
+        print('active_loans fetch error: $e');
+      }
 
-      // 3) Fetch next repayment date
+      // 3) Fetch next pending repayment date
       try {
         final schedules = await supabase
             .from('repayment_schedule')
             .select('due_date, loan_id, loans!inner(user_id)')
+            .eq('loans.user_id', user.id)
             .eq('status', 'pending')
             .order('due_date', ascending: true)
             .limit(1);
         if (schedules.isNotEmpty) {
-          nextPaymentDate = DateTime.parse(schedules[0]['due_date']);
+          nextPaymentDate =
+              DateTime.parse(schedules[0]['due_date'].toString());
         }
-      } catch (_) {}
+      } catch (e) {
+        print('repayment_schedule (next) fetch error: $e');
+      }
 
-      // 4) Fetch payment history from transactions
+      // 4) Fetch ALL transactions for this wallet, ordered date DESC
       if (walletId != null) {
         try {
-          final payments = await supabase
+          final txRows = await supabase
               .from('transactions')
-              .select()
+              .select('type, amount, date, description')
               .eq('wallet_id', walletId!)
-              .eq('type', 'payment')
               .order('date', ascending: false);
-          paymentHistory = payments.map<Map<String, String>>((item) {
-            String dateFormatted = item['date']?.toString() ?? '';
+          transactions = txRows.map<Map<String, String>>((item) {
+            String dateFmt = item['date']?.toString() ?? '';
             try {
-              dateFormatted = DateFormat(
-                'MMMM dd, yyyy',
-              ).format(DateTime.parse(dateFormatted));
+              dateFmt = DateFormat('MMM dd, yyyy')
+                  .format(DateTime.parse(dateFmt));
             } catch (_) {}
+            final amt = (item['amount'] as num?)?.toDouble() ?? 0.0;
             return {
-              'date': dateFormatted,
-              'amount': '₱${item['amount']}',
-              'status': 'Paid',
-            };
-          }).toList();
-        } catch (_) {}
-
-        // 5) Fetch auto-deduction log
-        try {
-          final deductions = await supabase
-              .from('transactions')
-              .select()
-              .eq('wallet_id', walletId!)
-              .eq('type', 'auto_deduction')
-              .order('date', ascending: false);
-          autoDeductionEntries = deductions.map<Map<String, String>>((item) {
-            String dateFormatted = item['date']?.toString() ?? '';
-            try {
-              dateFormatted = DateFormat(
-                'MMMM dd, yyyy',
-              ).format(DateTime.parse(dateFormatted));
-            } catch (_) {}
-            return {
+              'type': item['type']?.toString() ?? '',
+              'amount': '₱${amt.toStringAsFixed(2)}',
+              'date': dateFmt,
               'description': item['description']?.toString() ?? '',
-              'date': dateFormatted,
             };
           }).toList();
-        } catch (_) {}
+
+          // Keep legacy paymentHistory + autoDeductionEntries in sync
+          paymentHistory = transactions
+              .where((t) => t['type'] == 'payment')
+              .toList();
+          autoDeductionEntries = transactions
+              .where((t) => t['type'] == 'auto_deduction')
+              .map((t) => {
+                    'description': t['description'] ?? '',
+                    'date': t['date'] ?? '',
+                  })
+              .toList();
+        } catch (e) {
+          print('transactions fetch error: $e');
+        }
+      }
+
+      // 5) Fetch paid repayment_schedule rows for this user's loans
+      try {
+        final paid = await supabase
+            .from('repayment_schedule')
+            .select('due_date, amount, loans!inner(user_id)')
+            .eq('loans.user_id', user.id)
+            .eq('status', 'paid')
+            .order('due_date', ascending: false);
+        paidRepayments = paid.map<Map<String, String>>((item) {
+          String dateFmt = item['due_date']?.toString() ?? '';
+          try {
+            dateFmt =
+                DateFormat('MMM dd, yyyy').format(DateTime.parse(dateFmt));
+          } catch (_) {}
+          final amt = (item['amount'] as num?)?.toDouble() ?? 0.0;
+          return {
+            'due_date': dateFmt,
+            'amount': '₱${amt.toStringAsFixed(2)}',
+          };
+        }).toList();
+      } catch (e) {
+        print('paid repayments fetch error: $e');
       }
     } catch (e) {
       print('Error loading wallet data: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load wallet data: $e'),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
     }
 
     if (mounted) setState(() => _isLoading = false);
@@ -935,10 +986,10 @@ class EWalletTabState extends State<EWalletTab> {
                 ),
                 const SizedBox(height: 32),
 
-                // Transaction History
-                Text(
+                // ── Transaction History ──
+                const Text(
                   'Transaction History',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Arial',
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.5,
@@ -947,7 +998,25 @@ class EWalletTabState extends State<EWalletTab> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                WalletPaymentHistory(payments: paymentHistory),
+                WalletTransactionList(
+                  transactions: transactions,
+                  paidRepayments: paidRepayments,
+                ),
+                const SizedBox(height: 32),
+
+                // ── Payment History (paid repayment_schedule rows) ──
+                const Text(
+                  'Payment History',
+                  style: TextStyle(
+                    fontFamily: 'Arial',
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.5,
+                    color: Colors.black87,
+                    fontSize: 22,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                WalletPaidRepayments(paidRepayments: paidRepayments),
                 const SizedBox(height: 32),
               ],
             ),

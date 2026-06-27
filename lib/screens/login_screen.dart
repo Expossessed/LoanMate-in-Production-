@@ -4,6 +4,7 @@ import '../constants/app_colors.dart';
 import '../services/auth_service.dart';
 import 'register_screen.dart';
 import 'dashboard_screen.dart';
+import 'admin_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -91,9 +92,13 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = false);
 
     if (result['success'] == true) {
+      final role = result['role']?.toString().toLowerCase() ?? 'student';
+      final destination = role == 'admin'
+          ? const AdminDashboardScreen()
+          : const DashboardScreen();
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const DashboardScreen()),
+        MaterialPageRoute(builder: (context) => destination),
       );
     } else {
       // Trigger lockout countdown if the response says locked

@@ -103,15 +103,18 @@ class HomeTabState extends State<HomeTab> {
       walletId = wallet['id'];
 
       if (walletId != null) {
-        // Recent transactions (for activity feed)
+        // Recent transactions (for activity feed) — exclude system 'init' rows
         try {
           final txs = await supabase
               .from('transactions')
               .select()
               .eq('wallet_id', walletId!)
               .order('date', ascending: false)
-              .limit(5);
-          recentTransactions = List<Map<String, dynamic>>.from(txs);
+              .limit(10); // fetch extra so we still get 5 after filtering
+          recentTransactions = List<Map<String, dynamic>>.from(txs)
+              .where((tx) => (tx['type']?.toString() ?? '') != 'init')
+              .take(5)
+              .toList();
         } catch (_) {}
 
         // Payment transactions for repayment progress
