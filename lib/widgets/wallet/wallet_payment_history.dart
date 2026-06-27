@@ -10,14 +10,28 @@ class WalletPaymentHistory extends StatelessWidget {
   Widget _emptyState() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 24),
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
       child: Column(
         children: [
-          Icon(Icons.inbox_rounded, size: 40, color: Colors.grey[400]),
-          const SizedBox(height: 8),
+          Icon(Icons.receipt_long_outlined, size: 44, color: Colors.grey.shade400),
+          const SizedBox(height: 10),
           Text(
-            'No payment records yet.',
-            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+            'No repayments recorded yet.',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Paid repayments will appear here.',
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade400),
           ),
         ],
       ),

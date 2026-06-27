@@ -217,7 +217,19 @@ class AuthService {
       if (response.user != null) {
         // Success → clear any recorded attempts
         await _clearAttempts(studentId);
-        return {'success': true, 'message': 'Login Successful!'};
+
+        // Fetch role from users table for routing
+        String role = 'student';
+        try {
+          final userRow = await supabase
+              .from('users')
+              .select('role')
+              .eq('id', response.user!.id)
+              .maybeSingle();
+          role = (userRow?['role']?.toString() ?? 'student').toLowerCase();
+        } catch (_) {}
+
+        return {'success': true, 'message': 'Login Successful!', 'role': role};
       } else {
         await _recordFailedAttempt(studentId);
         return {'success': false, 'message': 'Invalid Credentials.'};

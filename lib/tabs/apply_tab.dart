@@ -15,6 +15,7 @@ class _ApplyTabState extends State<ApplyTab> {
   final supabase = Supabase.instance.client;
 
   bool _isLoading = true;
+  bool _isSubmitting = false;
   String _fullName = '';
   String _studentId = '';
   String _courseAndYear = '';
@@ -1048,7 +1049,7 @@ class _ApplyTabState extends State<ApplyTab> {
             const SizedBox(width: 16),
             Expanded(
               child: ElevatedButton(
-                onPressed: _handleSubmit,
+                onPressed: _isSubmitting ? null : _handleSubmit,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryGreen,
                   padding: const EdgeInsets.symmetric(vertical: 18),
@@ -1057,14 +1058,23 @@ class _ApplyTabState extends State<ApplyTab> {
                   ),
                   elevation: 0,
                 ),
-                child: const Text(
-                  'Submit Application',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
+                child: _isSubmitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text(
+                        'Submit Application',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
               ),
             ),
           ],
@@ -1074,8 +1084,9 @@ class _ApplyTabState extends State<ApplyTab> {
     );
   }
 
-  // ── AI submit flow ────────────────────────────────────────────────────────
+  // ── Submit flow — DB-wired ────────────────────────────────────────────────
   Future<void> _handleSubmit() async {
+    // 0) Guard: required docs
     final requiredKeys = ['cor', 'id', 'income'];
     final missing = requiredKeys.where((k) => _docFiles[k] == null).toList();
     if (missing.isNotEmpty) {
@@ -1088,15 +1099,115 @@ class _ApplyTabState extends State<ApplyTab> {
       );
       return;
     }
-    // Step 1 — AI review spinner
-    _showAiReviewDialog();
-    await Future.delayed(const Duration(seconds: 3));
-    if (!mounted) return;
-    Navigator.of(context).pop();
-    // Step 2 — Approved dialog
-    await _showAiApprovedDialog();
-    if (!mounted) return;
-    setState(() => _currentStep = 1);
+    // Guard: required fields
+    final amount = double.tryParse(_amountController.text.replaceAll(',', ''));
+    if (amount == null || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid loan amount.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    if (_purposeController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter the loan purpose.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      // 1) Insert into `loans` first to get loan_id
+      final loanInsert = await supabase
+          .from('loans')
+          .insert({
+            'user_id': user.id,
+            'amount': amount,
+            'purpose': _purposeController.text.trim(),
+            'status': 'pending',
+            'ai_evaluation': 'pending',
+          })
+          .select('id')
+          .single();
+
+      final loanId = loanInsert['id'].toString();
+
+      // 2) Upload each file to Storage bucket `loan-docs` and collect URLs
+      final List<Map<String, dynamic>> docRows = [];
+      for (final entry in _docFiles.entries) {
+        final file = entry.value;
+        if (file == null) continue;
+        final filename = entry.key + '_' + DateTime.now().millisecondsSinceEpoch.toString() + '.jpg';
+        final storagePath = '${user.id}/$loanId/$filename';
+        await supabase.storage
+            .from('application_images')
+            .upload(storagePath, file, fileOptions: const FileOptions(upsert: true));
+        final publicUrl = supabase.storage
+            .from('application_images')
+            .getPublicUrl(storagePath);
+        docRows.add({
+          'user_id': user.id,
+          'loan_id': loanId,
+          'file_url': publicUrl,
+        });
+      }
+
+      // 3) Insert one row per file into `documents`
+      if (docRows.isNotEmpty) {
+        await supabase.from('documents').insert(docRows);
+      }
+
+      if (!mounted) return;
+
+      // 4a) Show AI review spinner (UX — simulated, ai_evaluation stays 'pending')
+      _showAiReviewDialog();
+      await Future.delayed(const Duration(seconds: 3));
+      if (!mounted) return;
+      Navigator.of(context).pop(); // close spinner
+
+      // 4b) Show success dialog
+      await _showAiApprovedDialog();
+      if (!mounted) return;
+
+      // 4c) Reset form
+      setState(() {
+        _currentStep = 1;
+        _amountController.clear();
+        _purposeController.clear();
+        _mobileController.clear();
+        _repaymentTerm = 6;
+        _docFiles.updateAll((_, __) => null);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Application submitted successfully!'),
+          backgroundColor: AppColors.primaryGreen,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    } catch (e) {
+      print('Submit error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Submission failed: $e'),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   void _showAiReviewDialog() {
