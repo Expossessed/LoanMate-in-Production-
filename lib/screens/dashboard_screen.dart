@@ -19,6 +19,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // GlobalKeys let us call reload methods on child tabs
   final GlobalKey<HomeTabState> _homeKey = GlobalKey<HomeTabState>();
+  final GlobalKey<LoanTabState> _loanKey = GlobalKey<LoanTabState>();
   final GlobalKey<EWalletTabState> _walletKey = GlobalKey<EWalletTabState>();
 
   late final List<Widget> tabPages;
@@ -37,7 +38,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     tabPages = [
       HomeTab(key: _homeKey),
       const ApplyTab(),
-      const LoanTab(),
+      LoanTab(key: _loanKey),
       EWalletTab(
         key: _walletKey,
         onDataChanged: _onWalletDataChanged,
@@ -47,9 +48,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   /// Called by EWalletTab whenever a transaction mutates the database.
-  /// Forces the Home tab to re-fetch so its balance / savings are in sync.
+  /// Forces Home and Loan tabs to re-fetch so balances and activity are in sync.
   void _onWalletDataChanged() {
     _homeKey.currentState?.reloadData();
+    _loanKey.currentState?.reloadData();
   }
 
   @override
@@ -85,6 +87,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 // Refresh the tab we're switching to
                 if (index == 0) {
                   _homeKey.currentState?.reloadData();
+                } else if (index == 2) {
+                  _loanKey.currentState?.reloadData();
                 } else if (index == 3) {
                   _walletKey.currentState?.reloadData();
                 }

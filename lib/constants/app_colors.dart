@@ -102,9 +102,14 @@ class AppColors {
     switch (status.toLowerCase()) {
       case 'paid':
         return primaryGreen;
+      case 'approved':
+        return Colors.amber.shade700;
       case 'partial':
         return Colors.orange.shade800;
       case 'overdue':
+        return Colors.red.shade700;
+      case 'denied':
+      case 'rejected':
         return Colors.red.shade700;
       default:
         return Colors.grey;
@@ -115,10 +120,15 @@ class AppColors {
     switch (status.toLowerCase()) {
       case 'paid':
         return Icons.check_circle_rounded;
+      case 'approved':
+        return Icons.thumb_up_rounded;
       case 'partial':
         return Icons.timelapse_rounded;
       case 'overdue':
         return Icons.error_outline_rounded;
+      case 'denied':
+      case 'rejected':
+        return Icons.cancel_rounded;
       default:
         return Icons.info_outline_rounded;
     }
@@ -206,7 +216,7 @@ class AppColors {
         return Icons.info_outline_rounded;
     }
   }
-  // ── Wallet Payment History ──
+
   static Color walletPaymentColor(String status) {
     switch (status.toLowerCase()) {
       case 'paid':

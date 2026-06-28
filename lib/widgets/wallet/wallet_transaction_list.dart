@@ -97,15 +97,19 @@ class WalletTransactionList extends StatelessWidget {
       );
     }
 
+    // Filter out 'init' rows and limit to the 5 most recent
+    final displayedTx = transactions
+        .where((t) => (t['type'] ?? '') != 'init')
+        .take(5)
+        .toList();
+
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: transactions.length,
+      itemCount: displayedTx.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
-        final tx = transactions[index];
-        // Skip system init row (account creation placeholder)
-        if ((tx['type'] ?? '') == 'init') return const SizedBox.shrink();
+        final tx = displayedTx[index];
         final type = tx['type'] ?? '';
         final color = txColor(type);
         final typeLabel = type

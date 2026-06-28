@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:google_fonts/google_fonts.dart';
-import '../constants/app_colors.dart';
-import '../widgets/wallet/wallet_balance_card.dart';
+
+import '../constants/app_colors.dart'; // kept for body section colours
 import '../widgets/wallet/remaining_loan_card.dart';
 import '../widgets/wallet/wallet_savings_goal.dart';
 import '../widgets/wallet/auto_deduction_info_card.dart';
 import '../widgets/wallet/auto_deduction_log.dart';
-import '../widgets/wallet/wallet_payment_history.dart';
 import '../widgets/wallet/wallet_action_buttons.dart';
 import '../widgets/wallet/insufficient_balance_warning.dart';
 import '../widgets/wallet/wallet_transaction_list.dart';
 import '../widgets/wallet/wallet_paid_repayments.dart';
+import '../widgets/wallet/wallet_payment_history.dart';
+import '../widgets/wallet/ewallet_header.dart';
 
 class EWalletTab extends StatefulWidget {
   /// Callback fired after any transaction mutates the database
@@ -100,14 +100,13 @@ class EWalletTabState extends State<EWalletTab> {
             .select('remaining_balance, monthly_payment')
             .eq('user_id', user.id);
         double totalRemaining = 0;
-        double latestMonthly = 0;
+        double totalMonthly = 0;
         for (final a in activeRows) {
           totalRemaining += (a['remaining_balance'] as num?)?.toDouble() ?? 0;
-          latestMonthly =
-              (a['monthly_payment'] as num?)?.toDouble() ?? latestMonthly;
+          totalMonthly += (a['monthly_payment'] as num?)?.toDouble() ?? 0;
         }
         remainingLoanBalance = totalRemaining;
-        monthlyPayment = latestMonthly;
+        monthlyPayment = totalMonthly;
       } catch (e) {
         print('active_loans fetch error: $e');
       }
@@ -364,52 +363,60 @@ class EWalletTabState extends State<EWalletTab> {
   }
 
   // pay loan
-  void handlePayLoan() async {
+  Future<void> handlePayLoan() async {
     final user = supabase.auth.currentUser;
     if (user == null || walletId == null) return;
 
     if (remainingLoanBalance <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Your loan is already fully paid! 🎉'),
-          backgroundColor: AppColors.primaryGreen,
-          duration: Duration(seconds: 2),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Your loan is already fully paid! 🎉'),
+            backgroundColor: AppColors.primaryGreen,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
       return;
     }
     final String inputText = payAmountController.text.trim();
     if (inputText.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please enter an amount to pay.'),
-          backgroundColor: Colors.red.shade700,
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Please enter an amount to pay.'),
+            backgroundColor: Colors.red.shade700,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
       return;
     }
     final double? parsedAmount = double.tryParse(inputText);
     if (parsedAmount == null || parsedAmount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please enter a valid amount.'),
-          backgroundColor: Colors.red.shade700,
-          duration: const Duration(seconds: 2),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Please enter a valid amount.'),
+            backgroundColor: Colors.red.shade700,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
       return;
     }
     if (walletBalance < parsedAmount) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Insufficient balance! You have ₱${walletBalance.toStringAsFixed(2)}.',
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Insufficient balance! You have ₱${walletBalance.toStringAsFixed(2)}.',
+            ),
+            backgroundColor: Colors.red.shade700,
+            duration: const Duration(seconds: 3),
           ),
-          backgroundColor: Colors.red.shade700,
-          duration: const Duration(seconds: 3),
-        ),
-      );
+        );
+      }
       return;
     }
 
@@ -430,7 +437,7 @@ class EWalletTabState extends State<EWalletTab> {
       if (updateResult.isEmpty) {
         throw Exception('Wallet update returned empty, please report to us!');
       }
-      final txResult = await supabase.from('transactions').insert({
+      await supabase.from('transactions').insert({
         'wallet_id': walletId,
         'type': 'payment',
         'amount': actualPayment,
@@ -438,6 +445,7 @@ class EWalletTabState extends State<EWalletTab> {
         'description': 'Paid',
       }).select();
 
+      if (!mounted) return;
       setState(() {
         walletBalance = newBalance;
         remainingLoanBalance -= actualPayment;
@@ -450,6 +458,7 @@ class EWalletTabState extends State<EWalletTab> {
       });
       payAmountController.clear();
       notifyAndReload();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('₱${actualPayment.toStringAsFixed(2)} paid!'),
@@ -458,6 +467,7 @@ class EWalletTabState extends State<EWalletTab> {
         ),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Payment failed: $e'),
@@ -468,7 +478,7 @@ class EWalletTabState extends State<EWalletTab> {
   }
 
   // savings handler
-  void handleAddToSavings() async {
+  Future<void> handleAddToSavings() async {
     final user = supabase.auth.currentUser;
     if (user == null) return;
 
@@ -512,15 +522,11 @@ class EWalletTabState extends State<EWalletTab> {
     try {
       final newBalance = walletBalance - actualSavings;
       final newSavings = currentSavings + actualSavings;
-      print(
-        'DEBUG Savings: updating wallet balance=$newBalance, savings=$newSavings for user ${user.id}',
-      );
       final updateResult = await supabase
           .from('wallet')
           .update({'balance': newBalance, 'current_savings': newSavings})
           .eq('user_id', user.id)
           .select();
-      print('DEBUG Savings: wallet update result = $updateResult');
       if (updateResult.isEmpty) {
         throw Exception(
           'Wallet update returned empty — check RLS policies on the wallet table.',
@@ -529,22 +535,23 @@ class EWalletTabState extends State<EWalletTab> {
 
       // logs the savings transfer as a transaction
       if (walletId != null) {
-        final txResult = await supabase.from('transactions').insert({
+        await supabase.from('transactions').insert({
           'wallet_id': walletId,
           'type': 'savings',
           'amount': actualSavings,
           'date': DateTime.now().toIso8601String(),
           'description': 'Added to savings',
         }).select();
-        print('DEBUG Savings: transaction insert result = $txResult');
       }
 
+      if (!mounted) return;
       setState(() {
         walletBalance = newBalance;
         currentSavings = newSavings;
       });
       payAmountController.clear();
       notifyAndReload();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -555,6 +562,7 @@ class EWalletTabState extends State<EWalletTab> {
         ),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed: $e'),
@@ -820,107 +828,9 @@ class EWalletTabState extends State<EWalletTab> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Header (Dark Green with Curved Bottom) ──
-          Container(
-            padding: const EdgeInsets.only(
-              top: 50.0,
-              left: 24.0,
-              right: 24.0,
-              bottom: 30.0,
-            ),
-            decoration: const BoxDecoration(
-              color: AppColors.primaryGreen,
-              borderRadius: BorderRadius.only(bottomRight: Radius.circular(80)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'FINANCIAL MANAGEMENT',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'E-Wallet',
-                          style: const TextStyle(
-                            fontFamily: 'Arial',
-                            color: Colors.white,
-                            fontSize: 26,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 30),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'AVAILABLE BALANCE',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '₱${walletBalance.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontFamily: 'Arial',
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.5,
-                          color: Colors.white,
-                          fontSize: 42,
-                          height: 1,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.savings_outlined,
-                            color: Colors.white54,
-                            size: 14,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Savings: ₱${currentSavings.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              color: Colors.white54,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              fontFamily: 'monospace',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+          EWalletHeader(
+            walletBalance: walletBalance,
+            currentSavings: currentSavings,
           ),
 
           // ── Body (Cream Background) ──
@@ -929,10 +839,19 @@ class EWalletTabState extends State<EWalletTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Remaining Loan Card — only shown when there is an active loan
+                if (remainingLoanBalance > 0) ...[
+                  RemainingLoanCard(
+                    remainingBalance: remainingLoanBalance,
+                    monthlyPayment: monthlyPayment,
+                  ),
+                  const SizedBox(height: 24),
+                ],
+
                 // Original functional buttons (kept for Pay Loan / Add to Savings)
                 const Text(
                   'Manual Transactions',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Arial',
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
@@ -1004,7 +923,7 @@ class EWalletTabState extends State<EWalletTab> {
                 ),
                 const SizedBox(height: 32),
 
-                // ── Payment History (paid repayment_schedule rows) ──
+                // ── Payment History ──
                 const Text(
                   'Payment History',
                   style: TextStyle(
@@ -1016,7 +935,8 @@ class EWalletTabState extends State<EWalletTab> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                WalletPaidRepayments(paidRepayments: paidRepayments),
+                // All-types history capped at 5
+                WalletPaymentHistory(transactions: transactions),
                 const SizedBox(height: 32),
               ],
             ),

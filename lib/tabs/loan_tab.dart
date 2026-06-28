@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../constants/app_colors.dart';
-import '../widgets/track_loan/apply_loan_button.dart';
 import '../widgets/track_loan/ai_evaluation_card.dart';
 import '../widgets/track_loan/active_loans_section.dart';
 import '../widgets/track_loan/pending_loans_section.dart';
 import '../widgets/track_loan/loan_history_section.dart';
 import '../widgets/track_loan/recent_activity_section.dart';
 import '../widgets/track_loan/next_payment_card.dart';
+import '../widgets/track_loan/loan_header_card.dart';
 
 class LoanTab extends StatefulWidget {
   const LoanTab({super.key});
@@ -28,6 +28,7 @@ class LoanTabState extends State<LoanTab> {
   // ── Active loans (from active_loans table) ──
   List<Map<String, String>> activeLoans = [];
   double totalRemainingBalance = 0.0;
+  double totalOriginalAmount = 0.0; // sum of active_loans.original_amount
 
   // ── Next payment from repayment_schedule ──
   String nextDueDate = '';
@@ -62,43 +63,111 @@ class LoanTabState extends State<LoanTab> {
     loanHistory = [];
     recentActivity = [];
     totalRemainingBalance = 0.0;
+    totalOriginalAmount = 0.0;
     nextDueDate = '';
     nextDueAmount = '';
     aiResult = 'N/A';
     aiRiskLevel = 'N/A';
 
     try {
-      // ── 1) Fetch ALL loans for this user ──
+      // ── 1) Fetch ALL loans for this user (pending / history / activity / AI) ──
       final loans = await supabase
           .from('loans')
           .select('id, amount, purpose, status, ai_evaluation, applied_at')
           .eq('user_id', user.id)
           .order('applied_at', ascending: false);
 
-      // Collect loan IDs for subsequent queries
       final loanIds = loans.map((l) => l['id'].toString()).toList();
 
-      // ── 2) Fetch active_loans for this user ──
+      // Build a lookup: loan_id → loans row (for purpose / applied_at)
+      final Map<String, Map<String, dynamic>> loanById = {};
+      for (final l in loans) {
+        loanById[l['id'].toString()] = l;
+      }
+
+      // ── 2) Fetch active_loans directly — source of truth for active loans ──
       List<dynamic> activeRows = [];
-      if (loanIds.isNotEmpty) {
-        try {
-          activeRows = await supabase
-              .from('active_loans')
-              .select(
-                  'id, loan_id, remaining_balance, monthly_payment, start_date, last_payment_date')
-              .eq('user_id', user.id);
-        } catch (e) {
-          print('active_loans fetch error: $e');
+      try {
+        activeRows = await supabase
+            .from('active_loans')
+            .select(
+              'id, loan_id, original_amount, remaining_balance, monthly_payment, start_date, last_payment_date',
+            )
+            .eq('user_id', user.id)
+            .order('start_date', ascending: false);
+        // Filter out registration placeholders (original_amount == 0)
+        activeRows = activeRows
+            .where((r) => ((r['original_amount'] as num?)?.toDouble() ?? 0) > 0)
+            .toList();
+      } catch (e) {
+        print('active_loans fetch error: $e');
+      }
+
+      // Track which loan_ids are in active_loans (to exclude from pending/history)
+      final Set<String> activeLoanIds = {};
+
+      for (final row in activeRows) {
+        final loanId = row['loan_id']?.toString() ?? '';
+        final loanRow = loanById[loanId];
+        final original = (row['original_amount'] as num?)?.toDouble() ?? 0.0;
+        final remaining =
+            (row['remaining_balance'] as num?)?.toDouble() ?? original;
+        final monthly = (row['monthly_payment'] as num?)?.toDouble() ?? 0.0;
+
+        totalOriginalAmount += original;
+        totalRemainingBalance += remaining;
+
+        // ── Fully paid: move to history, remove from active display ──
+        if (remaining <= 0) {
+          // Mark the loan_id as handled so step 4 won't double-add it
+          activeLoanIds.add(loanId);
+          String appliedDate = loanRow?['applied_at']?.toString() ?? '';
+          try {
+            appliedDate = DateFormat('MMMM dd, yyyy')
+                .format(DateTime.parse(appliedDate));
+          } catch (_) {}
+          loanHistory.add({
+            'title': loanRow?['purpose']?.toString() ?? 'Loan',
+            'amount': currencyFormat.format(original),
+            'date': appliedDate,
+            'status': 'Paid',
+          });
+          continue; // don't add to activeLoans
         }
-      }
 
-      // Build a lookup: loan_id → active_loans row
-      final Map<String, Map<String, dynamic>> activeByLoan = {};
-      for (final a in activeRows) {
-        activeByLoan[a['loan_id'].toString()] = a;
-      }
+        // ── Still has a balance: show in active section ──
+        activeLoanIds.add(loanId);
 
-      // ── 3) Fetch next pending repayment (first row ordered by due_date ASC) ──
+        String startDate = row['start_date']?.toString() ?? '';
+        try {
+          startDate = DateFormat(
+            'MMM dd, yyyy',
+          ).format(DateTime.parse(startDate));
+        } catch (_) {}
+
+        String appliedDate = loanRow?['applied_at']?.toString() ?? '';
+        try {
+          appliedDate = DateFormat(
+            'MMMM dd, yyyy',
+          ).format(DateTime.parse(appliedDate));
+        } catch (_) {}
+
+        activeLoans.add({
+          'purpose': loanRow?['purpose']?.toString() ?? 'Loan',
+          'amount': currencyFormat.format(
+            original,
+          ), // original_amount from active_loans
+          'amount_raw': original.toString(),
+          'remaining_raw': remaining.toString(),
+          'monthly_payment': currencyFormat.format(monthly),
+          'start_date': startDate,
+          'date': appliedDate,
+          'status': 'Active',
+          'next_due': '', // patched below after schedule query
+        });
+      } // end for(activeRows)
+
+      // ── 3) Fetch next pending repayment ──
       if (loanIds.isNotEmpty) {
         try {
           final schedules = await supabase
@@ -111,81 +180,63 @@ class LoanTabState extends State<LoanTab> {
           if (schedules.isNotEmpty) {
             final first = schedules[0];
             try {
-              nextDueDate = DateFormat('MMM dd, yyyy')
-                  .format(DateTime.parse(first['due_date'].toString()));
+              nextDueDate = DateFormat(
+                'MMM dd, yyyy',
+              ).format(DateTime.parse(first['due_date'].toString()));
             } catch (_) {
               nextDueDate = first['due_date']?.toString() ?? '';
             }
-            nextDueAmount =
-                currencyFormat.format((first['amount'] as num?)?.toDouble() ?? 0);
+            nextDueAmount = currencyFormat.format(
+              (first['amount'] as num?)?.toDouble() ?? 0,
+            );
+
+            // Patch next_due into each active loan card
+            for (var i = 0; i < activeLoans.length; i++) {
+              activeLoans[i] = {...activeLoans[i], 'next_due': nextDueDate};
+            }
           }
         } catch (e) {
           print('repayment_schedule fetch error: $e');
         }
       }
 
-      // ── 4) Categorise loans ──
+      // ── 4) Categorise remaining loans (pending / history) ──
       for (final loan in loans) {
         final status = loan['status']?.toString().toLowerCase() ?? 'unknown';
         final loanId = loan['id']?.toString() ?? '';
         final amount = (loan['amount'] as num?)?.toDouble() ?? 0.0;
+        final purpose = loan['purpose']?.toString() ?? '';
+
+        // Skip registration placeholder
+        if (purpose.toLowerCase() == 'placeholder') continue;
+        // Skip loans already shown in the active section
+        if (activeLoanIds.contains(loanId)) continue;
 
         String dateFormatted = loan['applied_at']?.toString() ?? '';
         try {
-          dateFormatted = DateFormat('MMMM dd, yyyy')
-              .format(DateTime.parse(dateFormatted));
+          dateFormatted = DateFormat(
+            'MMMM dd, yyyy',
+          ).format(DateTime.parse(dateFormatted));
         } catch (_) {}
 
         final row = {
-          'title': loan['purpose']?.toString() ?? 'Loan',
+          'title': purpose,
           'amount': currencyFormat.format(amount),
           'date': dateFormatted,
           'status': _capitalize(status),
         };
 
         if (status == 'pending') {
-          // Skip the registration placeholder loan
-          final purpose = loan['purpose']?.toString() ?? '';
-          if (purpose.toLowerCase() != 'placeholder') {
-            pendingLoans.add(row);
-          }
-        } else if (status == 'approved' ||
-            status == 'active' ||
-            status == 'partial') {
-          // Look up active_loans row
-          final activeRow = activeByLoan[loanId];
-          final remaining =
-              (activeRow?['remaining_balance'] as num?)?.toDouble() ?? amount;
-          final monthly =
-              (activeRow?['monthly_payment'] as num?)?.toDouble() ?? 0.0;
-
-          String startDate = activeRow?['start_date']?.toString() ?? '';
-          try {
-            startDate =
-                DateFormat('MMM dd, yyyy').format(DateTime.parse(startDate));
-          } catch (_) {}
-
-          totalRemainingBalance += remaining;
-
-          activeLoans.add({
-            'purpose': loan['purpose']?.toString() ?? 'Loan',
-            'amount': currencyFormat.format(amount),
-            'amount_raw': amount.toString(),
-            'remaining_raw': remaining.toString(),
-            'monthly_payment': currencyFormat.format(monthly),
-            'start_date': startDate,
-            'date': dateFormatted,
-            'status': _capitalize(status),
-            'next_due': nextDueDate,
-          });
-        } else if (status == 'rejected' || status == 'denied') {
           pendingLoans.add(row);
+        } else if (status == 'rejected' || status == 'denied') {
+          // Denied/rejected are final — show in history with red colour, not pending
+          loanHistory.add(row);
         } else {
           loanHistory.add(row);
         }
       }
 
-      // ── 5) Recent activity from last 5 loans ──
+      // ── 5) Recent activity — loan status events + actual payments ──
       const activityIcons = {
         'approved': 'check_circle',
         'paid': 'payment',
@@ -197,7 +248,6 @@ class LoanTabState extends State<LoanTab> {
         'active': 'check_circle',
       };
       for (final loan in loans.take(5)) {
-        // Skip the registration placeholder
         final purpose = loan['purpose']?.toString() ?? '';
         if (purpose.toLowerCase() == 'placeholder') continue;
 
@@ -211,15 +261,63 @@ class LoanTabState extends State<LoanTab> {
           'text': 'Loan ${_capitalize(status)}',
           'date': dateFmt,
           'icon': activityIcons[status] ?? 'info_outline',
+          'sort_key': dateRaw,
         });
       }
 
-      // ── 6) AI evaluation — raw value from latest loan, shown as static badge ──
+      // ── 5b) Fetch actual payment/auto_deduction transactions ──
+      try {
+        final walletRow = await supabase
+            .from('wallet')
+            .select('id')
+            .eq('user_id', user.id)
+            .maybeSingle();
+        if (walletRow != null) {
+          final walletId = walletRow['id']?.toString();
+          if (walletId != null) {
+            final txRows = await supabase
+                .from('transactions')
+                .select('type, amount, date, description')
+                .eq('wallet_id', walletId)
+                .inFilter('type', ['payment', 'auto_deduction'])
+                .order('date', ascending: false)
+                .limit(5);
+            for (final tx in txRows) {
+              final amt = (tx['amount'] as num?)?.toDouble() ?? 0.0;
+              final type = tx['type']?.toString() ?? 'payment';
+              final dateRaw = tx['date']?.toString() ?? '';
+              String dateFmt = dateRaw;
+              try {
+                dateFmt = DateFormat('MMM dd, yyyy')
+                    .format(DateTime.parse(dateRaw));
+              } catch (_) {}
+              recentActivity.add({
+                'text': type == 'auto_deduction'
+                    ? 'Auto-Deduction  ₱${amt.toStringAsFixed(2)}'
+                    : 'Loan Payment  ₱${amt.toStringAsFixed(2)}',
+                'date': dateFmt,
+                'icon': 'payment',
+                'sort_key': dateRaw,
+              });
+            }
+          }
+        }
+      } catch (_) {}
+
+      // Sort merged activity newest-first and cap at 8
+      recentActivity.sort((a, b) =>
+          (b['sort_key'] ?? '').compareTo(a['sort_key'] ?? ''));
+      if (recentActivity.length > 8) {
+        recentActivity = recentActivity.sublist(0, 8);
+      }
+
+      // ── 6) AI evaluation — raw value from latest loan ──
       if (loans.isNotEmpty) {
         final rawAi = loans[0]['ai_evaluation']?.toString() ?? 'N/A';
         aiResult = _capitalize(rawAi);
-        // Simple display label: no API call, just map for badge colour
-        aiRiskLevel = rawAi.toLowerCase() == 'eligible' ? 'Low Risk' : 'High Risk';
+        aiRiskLevel = rawAi.toLowerCase() == 'eligible'
+            ? 'Low Risk'
+            : 'High Risk';
       }
     } catch (e) {
       print('Error loading loan data: $e');
@@ -247,13 +345,12 @@ class LoanTabState extends State<LoanTab> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    double totalOriginal = 0;
-    for (final loan in activeLoans) {
-      totalOriginal += double.tryParse(loan['amount_raw'] ?? '0') ?? 0;
-    }
+    // Use active_loans.original_amount (already summed during _loadData)
+    final double totalOriginal = totalOriginalAmount;
     final double totalPaid = totalOriginal - totalRemainingBalance;
-    final double progress =
-        totalOriginal > 0 ? (totalPaid / totalOriginal).clamp(0.0, 1.0) : 0.0;
+    final double progress = totalOriginal > 0
+        ? (totalPaid / totalOriginal).clamp(0.0, 1.0)
+        : 0.0;
     final int progressPct = (progress * 100).toInt();
 
     return SingleChildScrollView(
@@ -261,137 +358,9 @@ class LoanTabState extends State<LoanTab> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── Header ──
-          Container(
-            padding: const EdgeInsets.only(
-              top: 50.0,
-              left: 24.0,
-              right: 24.0,
-              bottom: 40.0,
-            ),
-            decoration: const BoxDecoration(
-              color: AppColors.primaryGreen,
-              borderRadius:
-                  BorderRadius.only(bottomRight: Radius.circular(80)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'LOAN MANAGEMENT',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Track Loan',
-                  style: TextStyle(
-                    fontFamily: 'Arial',
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.5,
-                    color: Colors.white,
-                    fontSize: 32,
-                  ),
-                ),
-                const SizedBox(height: 30),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // Circular Progress
-                    SizedBox(
-                      width: 80,
-                      height: 80,
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          CircularProgressIndicator(
-                            value: progress,
-                            strokeWidth: 10,
-                            backgroundColor: Colors.white.withOpacity(0.1),
-                            valueColor: const AlwaysStoppedAnimation<Color>(
-                              Colors.redAccent,
-                            ),
-                          ),
-                          Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  '$progressPct%',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const Text(
-                                  'paid',
-                                  style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 10,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 24),
-                    // Balances
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'TOTAL LOAN',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                          Text(
-                            '₱${totalOriginal.toStringAsFixed(0)}',
-                            style: const TextStyle(
-                              fontFamily: 'Arial',
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: -0.5,
-                              color: Colors.white,
-                              fontSize: 24,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          const Text(
-                            'REMAINING',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                          Text(
-                            '₱${totalRemainingBalance.toStringAsFixed(0)}',
-                            style: const TextStyle(
-                              fontFamily: 'Arial',
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: -0.5,
-                              color: Colors.redAccent,
-                              fontSize: 24,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+          LoanHeaderCard(
+            totalOriginal: totalOriginal,
+            totalRemainingBalance: totalRemainingBalance,
           ),
 
           // ── Body ──
@@ -400,7 +369,6 @@ class LoanTabState extends State<LoanTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const ApplyLoanButton(),
                 const SizedBox(height: 24),
 
                 // AI Evaluation — static badge, raw text from loans.ai_evaluation
@@ -436,5 +404,4 @@ class LoanTabState extends State<LoanTab> {
       ),
     );
   }
-
 }

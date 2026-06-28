@@ -133,8 +133,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   // ── AI evaluation popup ────────────────────────────────────────────────
-  Future<void> _showAiEvaluationDialog() async {
-    return showDialog(
+  // Returns void intentionally: the dialog is closed programmatically after
+  // the 3-second delay in handleRegister, not by waiting for user dismissal.
+  void _showAiEvaluationDialog() {
+    showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => const _AiEvaluatingDialog(),
