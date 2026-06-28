@@ -43,9 +43,17 @@ class RecentActivitySection extends StatelessWidget {
           ListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: activities.length,
+            itemCount: activities.length > 5 ? 5 : activities.length,
             itemBuilder: (context, index) {
               final activity = activities[index];
+              final isPayment = activity['icon'] == 'payment';
+              final iconColor = isPayment
+                  ? AppColors.accentBlue
+                  : AppColors.primaryGreen;
+              final bgColor = isPayment
+                  ? AppColors.accentBlue.withOpacity(0.10)
+                  : AppColors.primaryGreen.withOpacity(0.10);
+
               return Card(
                 elevation: 1,
                 margin: const EdgeInsets.only(bottom: 8),
@@ -54,18 +62,19 @@ class RecentActivitySection extends StatelessWidget {
                 ),
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: AppColors.primaryGreen.withOpacity(0.1),
+                    backgroundColor: bgColor,
                     child: Icon(
                       AppColors.activityIcon(activity['icon'] ?? ''),
-                      color: AppColors.primaryGreen,
+                      color: iconColor,
                       size: 22,
                     ),
                   ),
                   title: Text(
                     activity['text'] ?? '',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w500,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
                       fontSize: 14,
+                      color: isPayment ? AppColors.accentBlue : Colors.black87,
                     ),
                   ),
                   subtitle: Text(

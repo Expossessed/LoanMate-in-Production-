@@ -41,7 +41,6 @@ class AuthService {
           'enrollment_status': 'Active',
           'role': 'Student',
           'agreed_to_terms': true,
-          'created_at': DateTime.now().toIso8601String(),
         });
 
         // ── 2. wallet (references users.id) ──────────────────────────────
@@ -80,14 +79,9 @@ class AuthService {
           'status': 'Pending',
         });
 
-        await supabase.from('active_loans').insert({
-          'loan_id': loanId,
-          'user_id': userId,
-          'original_amount': 0.0,
-          'remaining_balance': 0.0,
-          'monthly_payment': 0.0,
-          'start_date': DateTime.now().toIso8601String().substring(0, 10),
-        });
+        // active_loans rows are only created by the admin when a loan is approved.
+        // Do NOT insert a placeholder here — it would show as a fake active loan
+        // across Home, Loan, and E-Wallet tabs.
 
         // ── Upload study load image to Supabase Storage ─────────────────
         String fileUrl = '';

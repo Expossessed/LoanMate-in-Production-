@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../constants/app_colors.dart';
+import '../screens/login_screen.dart';
 
 class ApplyTab extends StatefulWidget {
   const ApplyTab({super.key});
@@ -339,6 +340,15 @@ class _ApplyTabState extends State<ApplyTab> {
                       GestureDetector(
                         onTap: () async {
                           await supabase.auth.signOut();
+                          if (context.mounted) {
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const LoginScreen(),
+                              ),
+                              (route) => false,
+                            );
+                          }
                         },
                         child: Row(
                           children: [
@@ -462,12 +472,12 @@ class _ApplyTabState extends State<ApplyTab> {
         _buildReadonlyField('STUDENT ID', _studentId),
         _buildReadonlyField('COURSE & YEAR', _courseAndYear),
 
-        // Mobile — editable blank field
+        // Mobile — +63 prefix with 10-digit max
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'MOBILE NUMBER',
+              'MOBILE NUMBER *',
               style: TextStyle(
                 color: Colors.grey.shade600,
                 fontSize: 10,
@@ -485,18 +495,62 @@ class _ApplyTabState extends State<ApplyTab> {
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Colors.grey.shade200),
               ),
-              child: TextField(
-                controller: _mobileController,
-                keyboardType: TextInputType.phone,
-                style: const TextStyle(
-                  fontFamily: 'Arial',
-                  fontSize: 14,
-                  color: Colors.black87,
-                ),
-                decoration: const InputDecoration(
-                  border: InputBorder.none,
-                  hintText: 'e.g. +63 912 345 6789',
-                ),
+              child: Row(
+                children: [
+                  const Text(
+                    '+63',
+                    style: TextStyle(
+                      fontFamily: 'Arial',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    '|',
+                    style: TextStyle(color: Colors.grey, fontSize: 18),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _mobileController,
+                      keyboardType: TextInputType.number,
+                      maxLength: 10,
+                      style: const TextStyle(
+                        fontFamily: 'Arial',
+                        fontSize: 14,
+                        color: Colors.black87,
+                      ),
+                      decoration: const InputDecoration(
+                        border: InputBorder.none,
+                        hintText: '9XX XXX XXXX',
+                        counterText: '', // hide the maxLength counter
+                      ),
+                      onChanged: (val) {
+                        // Strip non-digit characters
+                        final digits = val.replaceAll(RegExp(r'[^0-9]'), '');
+                        if (digits != val) {
+                          _mobileController.value = TextEditingValue(
+                            text: digits,
+                            selection: TextSelection.collapsed(
+                              offset: digits.length,
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Enter 10 digits after +63  (e.g. 9123456789)',
+              style: TextStyle(
+                color: Colors.grey.shade500,
+                fontSize: 10,
+                fontFamily: 'monospace',
               ),
             ),
             const SizedBox(height: 20),
@@ -510,6 +564,23 @@ class _ApplyTabState extends State<ApplyTab> {
           width: double.infinity,
           child: ElevatedButton(
             onPressed: () {
+              // Validate mobile: must be exactly 10 digits
+              final digits = _mobileController.text.replaceAll(
+                RegExp(r'[^0-9]'),
+                '',
+              );
+              if (digits.length != 10) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Please enter a valid 10-digit mobile number (e.g. 9123456789).',
+                    ),
+                    backgroundColor: Colors.red,
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+                return;
+              }
               setState(() => _currentStep = 2);
             },
             style: ElevatedButton.styleFrom(
@@ -821,6 +892,35 @@ class _ApplyTabState extends State<ApplyTab> {
             Expanded(
               child: ElevatedButton(
                 onPressed: () {
+                  // Validate amount
+                  final amt = double.tryParse(
+                    _amountController.text.replaceAll(',', ''),
+                  );
+                  if (amt == null || amt < 1000 || amt > 10000) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Please enter a loan amount between ₱5,000 and ₱50,000.',
+                        ),
+                        backgroundColor: Colors.red,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                    return;
+                  }
+                  // Validate purpose
+                  if (_purposeController.text.trim().isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Please describe the purpose of your loan.',
+                        ),
+                        backgroundColor: Colors.red,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                    return;
+                  }
                   setState(() => _currentStep = 3);
                 },
                 style: ElevatedButton.styleFrom(
@@ -1049,7 +1149,23 @@ class _ApplyTabState extends State<ApplyTab> {
             const SizedBox(width: 16),
             Expanded(
               child: ElevatedButton(
-                onPressed: _isSubmitting ? null : _handleSubmit,
+                onPressed: () {
+                  // Validate: all 4 documents must be uploaded
+                  final allUploaded = _docFiles.values.every((f) => f != null);
+                  if (!allUploaded) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Please upload all required documents before submitting.',
+                        ),
+                        backgroundColor: Colors.red,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                    return;
+                  }
+                  if (!_isSubmitting) _handleSubmit();
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryGreen,
                   padding: const EdgeInsets.symmetric(vertical: 18),
@@ -1146,11 +1262,19 @@ class _ApplyTabState extends State<ApplyTab> {
       for (final entry in _docFiles.entries) {
         final file = entry.value;
         if (file == null) continue;
-        final filename = entry.key + '_' + DateTime.now().millisecondsSinceEpoch.toString() + '.jpg';
+        final filename =
+            entry.key +
+            '_' +
+            DateTime.now().millisecondsSinceEpoch.toString() +
+            '.jpg';
         final storagePath = '${user.id}/$loanId/$filename';
         await supabase.storage
             .from('application_images')
-            .upload(storagePath, file, fileOptions: const FileOptions(upsert: true));
+            .upload(
+              storagePath,
+              file,
+              fileOptions: const FileOptions(upsert: true),
+            );
         final publicUrl = supabase.storage
             .from('application_images')
             .getPublicUrl(storagePath);
